@@ -6,6 +6,10 @@ import { importGpToIsr } from "./parser/importer";
 import { expandScore } from "./score/ScorePlaybackAdapter";
 import { PracticeBoard } from "./PracticeBoard";
 import { usePracticeStore } from "./store/scoreStore";
+import { TrainingPanel, type TrainingStats } from "./TrainingPanel";
+
+/** 练习 mock 成绩（原生评分接入后替换）。 */
+const mockStats: TrainingStats = { hits: 0, misses: 0, extras: 0, early: 0, late: 0, total: 0 };
 
 const SCRIPTS: Array<{ name: string; purpose: string }> = [
   { name: "npm run dev", purpose: "启动本地 Vite 开发服务器" },
@@ -209,6 +213,7 @@ function PingControl() {
 
 export function App() {
   const diag = getConnectorDiagnostic();
+  const practiceIsr = usePracticeStore((s) => s.isr);
   const bootedAt = new Date(diag.bootedAt).toLocaleTimeString("zh-CN", {
     hour12: false,
   });
@@ -245,6 +250,13 @@ export function App() {
       <div className="spacer" />
 
       <PracticePanel />
+
+      {practiceIsr ? (
+        <>
+          <div className="spacer" />
+          <TrainingPanel stats={mockStats} />
+        </>
+      ) : null}
 
       <section className="scripts">
         <h2>本地脚本</h2>
