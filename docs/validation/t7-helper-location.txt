@@ -1,0 +1,5 @@
+﻿CORRECTION: JUCE9 moved the helper. Verified from full official 9.0.3 tree (not truncated).
+https://github.com/juce-framework/JUCE/tree/9.0.3/modules/juce_gui_extra/native/typescript/webview-interop
+Use dist/index.js + matching .d.ts and license files, or exact package version verified from this folder.
+Old native/javascript/index.js path returns 404 in 9.0.3; do not assume host automatically serves ./juce.
+Owner Pi should bundle the matching helper in frontend, preserving license/source. Claude must update contracts paths accordingly.

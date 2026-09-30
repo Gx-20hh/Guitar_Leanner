@@ -1,0 +1,110 @@
+﻿[
+  {
+    "number": 7,
+    "title": "M0 验证工具链、双端骨架与真实桥接",
+    "depends": [],
+    "owner": "Claude：工具链/CMake/JUCE/WebView2；Pi：React/Vite/桥接客户端；Codex：契约及联调审查",
+    "files": "CMakeLists.txt、CMakePresets.json、native/app/、native/bridge/、frontend/、contracts/、.github/workflows/、licenses/",
+    "gate": "先核对MSVC/SDK/CMake/PATH和WebView2，再锁依赖；先共同冻结envelope，再双端分目录并行。真实WebView2本地页面一次request/reply；版本/未知命令/错误关联验证；CMake、前端typecheck/test/build实际输出和Windows CI。记录许可/SoundFont来源。alphaTab留T11，不把mock当真实桥接。"
+  },
+  {
+    "number": 8,
+    "title": "M0 验证 GE200 设备输入与真实 RMS",
+    "depends": [
+      7
+    ],
+    "owner": "Claude设备/采集，Pi最小电平显示",
+    "files": "native/audio/、frontend/设备显示、docs/validation/ge200.md",
+    "gate": "MOOER GE200非Pro/Plus；记录Windows/固件/驱动/端点/通道/实际采样率缓冲；验证USB干声、无信号/削波；同设备输入输出。未接硬件可做模拟，但本项实机部分不能放行。不安装或切换驱动/音色。"
+  },
+  {
+    "number": 9,
+    "title": "M1 验证 DSP 离线算法并接入实时调音器",
+    "depends": [
+      17,
+      10
+    ],
+    "owner": "Claude DSP/离线工具，Pi调音器/指板候选",
+    "files": "native/dsp/、tests/audio-fixtures/、frontend/调音显示",
+    "gate": "先离线后接同一实时算法；至少200独立干净单音事件，稳态有效帧95%在±25音分内且有效覆盖率目标95%；起音precision/recall各90%；六弦/低音/同音连弹/噪声分别报告；音高反馈P95目标120ms。调参/最终验证集分开，真实拨弦不能用合成音替代。"
+  },
+  {
+    "number": 10,
+    "title": "M1 实现干声缓冲、WAV 录音与监听基础",
+    "depends": [
+      17,
+      8
+    ],
+    "owner": "Claude，Pi仅承担明确派发的录音控件",
+    "files": "native/audio/、native/storage/录音写入、tests/audio-fixtures/",
+    "gate": "预分配队列、磁盘线程写WAV并可回读；回调无IO/锁/不可控分配；溢出/拔插标audioGap；直通/软件监听路径可选择且不双路叠加。为T9提供连续样本和时间戳，完整回放在T20。"
+  },
+  {
+    "number": 11,
+    "title": "M0 验证 GP5/GP 导入、六线谱与音轨",
+    "depends": [
+      7
+    ],
+    "owner": "Pi；Claude复核DTO消费",
+    "files": "frontend/src/score-adapter/、frontend/谱面、tests/score-fixtures/",
+    "gate": "自制/获授权GP5和GP各一个；锁alphaTab和npm依赖；渲染六线谱，核对轨道/调弦/变调夹/弦序。保留来源哈希和版本；public API不足记录限制。T7前端/契约子项验收后可先做离线原型，不必等设备。"
+  },
+  {
+    "number": 12,
+    "title": "M0 验证播放展开、MIDI 与目标身份映射",
+    "depends": [
+      11
+    ],
+    "owner": "Pi唯一实现ScorePlaybackAdapter；Claude时间语义复核；Codex验收",
+    "files": "frontend/src/score-adapter/、tests/score-fixtures/、contracts/（本任务Pi唯一写入）",
+    "gate": "同一次展开产出MIDI/TrainingTarget/谱面映射；sourceNoteId/sourceBeatId/occurrenceId稳定。核对反复/一二结尾/延音/tempo map/PPQ/三连音/多声部；复杂跳转不可靠时明确禁用评分。DTO不含alphaTab对象。"
+  },
+  {
+    "number": 13,
+    "title": "M0 验证原生伴奏、节拍器与外部时钟光标",
+    "depends": [
+      7,
+      8,
+      12
+    ],
+    "owner": "Claude原生调度/TinySoundFont，Pi原生位置驱动光标",
+    "files": "native/transport/、native/audio/、frontend/光标、tests/integration/（逐子项指定写入者）",
+    "gate": "唯一原生样本时钟；授权音色；浏览器训练音频关闭；样本偏移调度/tempo map/epoch。10分钟含变速/反复，视觉误差目标≤50ms且无累积漂移。真实声音与谱面比对，mock只能单元验证。"
+  },
+  {
+    "number": 14,
+    "title": "M3 实现延迟校准、单音匹配与训练反馈",
+    "depends": [
+      9,
+      10,
+      15,
+      19
+    ],
+    "owner": "Claude校准/匹配，Pi反馈，Codex独立复核",
+    "files": "native/practice/、native/transport/、frontend/反馈、tests/audio-fixtures/、docs/calibration.md",
+    "gate": "≥10标注练习录音；offsetSamples符号测试；一次起音只命中一次，同音连弹需新起音，延音不重拨；弱信号保留分母，技术缺口暂停；技巧排除与覆盖率分开；命中/错音/漏音/额外音/提前滞后/无法判定分项报告。无回环不冒充纯硬件延迟。"
+  },
+  {
+    "number": 15,
+    "title": "M2 实现 A–B 循环、变速、静音与计入",
+    "depends": [
+      18,
+      12,
+      13
+    ],
+    "owner": "Claude播放状态机，Pi操作控件",
+    "files": "native/transport/、frontend/播放控件、tests/integration/",
+    "gate": "边界note-off/踏板/残音清理、延音截断或恢复规则；seek/loop/speed epoch使旧检测失效；tempo map按比例积分；目标轨静音、预备拍及操作状态反馈；训练成绩另由T14完成。"
+  },
+  {
+    "number": 16,
+    "title": "M4 完成持久化、历史、诊断与离线安装包",
+    "depends": [
+      20,
+      19
+    ],
+    "owner": "Claude SQLite/配置/打包，Pi设置/曲库历史",
+    "files": "native/storage/、frontend/、packaging/、licenses/、docs/兼容与诊断",
+    "gate": "会话固化哈希/算法/阈值/调弦/校准/速度；SQLite迁移/恢复；诊断不附完整音频；WebView2离线方案，许可及SoundFont再核对；卸载保留用户曲库/录音。T21独立实机放行。"
+  }
+]

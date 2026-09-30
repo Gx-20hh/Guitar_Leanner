@@ -1,0 +1,7 @@
+Verified official source: https://raw.githubusercontent.com/juce-framework/JUCE/9.0.3/modules/juce_gui_extra/misc/juce_WebBrowserComponent.h
+Tag: 9.0.3; API query independently verified by project lead.
+Use Options::withNativeIntegrationEnabled, Options::withNativeFunction and Options::withResourceProvider. No registerWebViewJavaScriptObject symbol exists in this header.
+Do not use hostObjects or invent JUCE APIs. Check matching JS helper in modules/juce_gui_extra/native/javascript/index.js.
+VS2022 Build Tools C++ workload is installing under project lead supervision. Do not install another toolchain.
+CORRECTION: helper path moved in JUCE9: modules/juce_gui_extra/native/typescript/webview-interop. Package @juce-framework/webview 1.0.0 in tag9.0.3. Pi owns fetching/bundling it. Native must not spend time implementing frontend helper.
+VS BuildTools installation now complete. Root: C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools. CMake: Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe (3.31.6-msvc6). Use Visual Studio 17 2022 generator and x64.

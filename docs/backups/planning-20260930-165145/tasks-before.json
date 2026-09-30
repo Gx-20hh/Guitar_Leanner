@@ -1,0 +1,189 @@
+﻿[
+    {
+        "value":  [
+                      {
+                          "id":  "5ff45a17-80de-4a40-9d12-849ed1abf15c",
+                          "number":  7,
+                          "project":  null,
+                          "status":  "started",
+                          "title":  "M0 初始化工程",
+                          "notes":  null,
+                          "steps":  [
+                                        {
+                                            "id":  "463960e7-fcd7-4ea3-854b-f8a8a061acc2",
+                                            "done":  false,
+                                            "short_id":  "4",
+                                            "text":  "验证 CMakeLists.txt 原生 app 骨架"
+                                        },
+                                        {
+                                            "id":  "dd0ffcbd-174c-4f96-b490-0d6abe0e5c99",
+                                            "done":  false,
+                                            "short_id":  "d",
+                                            "text":  "验证 frontend Vite 配置"
+                                        },
+                                        {
+                                            "id":  "f8ae4131-5fb8-4fbe-953b-b7efe6efbe28",
+                                            "done":  false,
+                                            "short_id":  "f",
+                                            "text":  "验证桥接 ping-pong 通路"
+                                        }
+                                    ],
+                          "thread":  null
+                      }
+                  ],
+        "Count":  1
+    },
+    {
+        "value":  [
+                      {
+                          "id":  "3255f795-d652-49eb-82f1-be9aba7bd7a8",
+                          "number":  8,
+                          "project":  null,
+                          "status":  "ready",
+                          "title":  "M0 设备枚举 RMS 电平",
+                          "notes":  null,
+                          "steps":  [
+
+                                    ],
+                          "thread":  null
+                      }
+                  ],
+        "Count":  1
+    },
+    {
+        "value":  [
+                      {
+                          "id":  "ad425b1b-adc8-49a1-812c-23cae9e2fbe0",
+                          "number":  9,
+                          "project":  null,
+                          "status":  "ready",
+                          "title":  "M0 DSP 离线测试 实时调音器",
+                          "notes":  null,
+                          "steps":  [
+
+                                    ],
+                          "thread":  null
+                      }
+                  ],
+        "Count":  1
+    },
+    {
+        "value":  [
+                      {
+                          "id":  "1d6e0696-df41-4f5a-927e-ac77b1cce248",
+                          "number":  10,
+                          "project":  null,
+                          "status":  "ready",
+                          "title":  "M0 干声采集 WAV 录音监听",
+                          "notes":  null,
+                          "steps":  [
+
+                                    ],
+                          "thread":  null
+                      }
+                  ],
+        "Count":  1
+    },
+    {
+        "value":  [
+                      {
+                          "id":  "f49f82b5-2891-477f-a344-604b899bcba3",
+                          "number":  11,
+                          "project":  null,
+                          "status":  "ready",
+                          "title":  "M0 乐谱导入 六线谱渲染 音轨",
+                          "notes":  null,
+                          "steps":  [
+
+                                    ],
+                          "thread":  null
+                      }
+                  ],
+        "Count":  1
+    },
+    {
+        "value":  [
+                      {
+                          "id":  "854e100c-7af4-471b-9007-992c4992e847",
+                          "number":  12,
+                          "project":  null,
+                          "status":  "ready",
+                          "title":  "M0 播放展开 MIDI 目标音符映射",
+                          "notes":  null,
+                          "steps":  [
+
+                                    ],
+                          "thread":  null
+                      }
+                  ],
+        "Count":  1
+    },
+    {
+        "value":  [
+                      {
+                          "id":  "d327647b-4fc1-443e-97f1-4d4d843d2396",
+                          "number":  13,
+                          "project":  null,
+                          "status":  "ready",
+                          "title":  "M0 伴奏节拍器 谱面光标同步",
+                          "notes":  null,
+                          "steps":  [
+
+                                    ],
+                          "thread":  null
+                      }
+                  ],
+        "Count":  1
+    },
+    {
+        "value":  [
+                      {
+                          "id":  "fc90d8b5-e49e-4d54-b6c9-cf83631c97d5",
+                          "number":  14,
+                          "project":  null,
+                          "status":  "ready",
+                          "title":  "M0 训练判定 校准 单音匹配",
+                          "notes":  null,
+                          "steps":  [
+
+                                    ],
+                          "thread":  null
+                      }
+                  ],
+        "Count":  1
+    },
+    {
+        "value":  [
+                      {
+                          "id":  "f8db6bea-8d2f-458d-8e88-50b9c2235ab0",
+                          "number":  15,
+                          "project":  null,
+                          "status":  "ready",
+                          "title":  "M0 循环变速 目标轨静音反馈",
+                          "notes":  null,
+                          "steps":  [
+
+                                    ],
+                          "thread":  null
+                      }
+                  ],
+        "Count":  1
+    },
+    {
+        "value":  [
+                      {
+                          "id":  "1949e878-536a-426a-a3eb-75007d57fe0a",
+                          "number":  16,
+                          "project":  null,
+                          "status":  "ready",
+                          "title":  "M0 持久化 曲库 安装包",
+                          "notes":  null,
+                          "steps":  [
+
+                                    ],
+                          "thread":  null
+                      }
+                  ],
+        "Count":  1
+    }
+]

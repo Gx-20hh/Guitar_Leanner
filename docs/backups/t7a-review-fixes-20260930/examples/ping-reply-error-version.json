@@ -1,0 +1,9 @@
+{
+  "protocolVersion": 1,
+  "requestId": "req_0192fc3a-5678-4abc-8def-1234567890ab",
+  "ok": false,
+  "error": {
+    "code": "E_VERSION_UNSUPPORTED",
+    "message": "protocolVersion 3 is not supported; current version is 1"
+  }
+}

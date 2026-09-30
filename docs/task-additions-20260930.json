@@ -1,0 +1,32 @@
+[
+  {
+    "title": "M0 放行：GE200、谱面映射与原生同步",
+    "notes": "Owner: Codex 验收；Claude/Pi 提交证据。\nDepends: T8、T12、T13通过review且依赖放行证据齐备。\nGate: GE200真实干声稳定采集；反复occurrence一一映射；原生伴奏与谱面一致。记录固件/驱动/通道/采样率缓冲及误差。没有实机不能放行。\nFiles: docs/validation/m0.md；只记录实际结果，失败先缩小支持范围，不进入M1整合。\nReference: docs/project-arrangement-review.md。状态open表示未来安排，不代表可立即派工。",
+    "project": null
+  },
+  {
+    "title": "M1 完成设备向导、档案与故障恢复",
+    "notes": "Owner: Claude设备/档案，Pi向导/提示。\nDepends: M0放行、T8、T9、T10。\nGate: 首次设备配置、背景噪声、增益/削波、监听路径；设备占用/拔插/采样率变化/睡眠恢复可解释恢复，校准档案变化失效。\nFiles: native/audio/、native/storage/、frontend/；按子项指定写入者。\nReference: docs/project-arrangement-review.md。状态open表示未来安排，不代表可立即派工。",
+    "project": null
+  },
+  {
+    "title": "M2 完成各格式兼容、安全导入和曲库基础",
+    "notes": "Owner: Pi导入/谱例；Claude文件限额/索引；Codex复核。\nDepends: M1设备恢复完成、T11、T12。\nGate: GP3/GP4/GP5/GPX/GP每类至少3个自制或授权样本；GP8单独验收；变调夹/移调/多声部/三连音/延音/反复预期；坏文件、解压体积条目限制、异常路径拒绝。曲库基础索引。\nFiles: frontend/src/score-adapter/、tests/score-fixtures/、native/storage/、docs/compatibility.md；共享契约唯一写入者。\nReference: docs/project-arrangement-review.md。状态open表示未来安排，不代表可立即派工。",
+    "project": null
+  },
+  {
+    "title": "M3 完成基础练习、录音回放与界面闭环",
+    "notes": "Owner: Pi基础练习/界面，Claude回放/节拍器。\nDepends: T14。\nGate: 爬格子/音阶/节奏练习；BPM、拍号、重音、细分和计入；干声录音可回放。完成导谱选轨调弦到错音循环流程；快捷键不抢输入框，高DPI/缩放/深浅主题/色盲反馈。\nFiles: frontend/、native/audio/、native/transport/、resources/；自带内容记录授权。\nReference: docs/project-arrangement-review.md。状态open表示未来安排，不代表可立即派工。",
+    "project": null
+  },
+  {
+    "title": "M4 独立验收：GE200稳定性与干净机离线安装",
+    "notes": "Owner: Codex放行；Claude/Pi分别供证与修复。\nDepends: T16。\nGate: 框架§13全部指标和支持矩阵；真实GE200连续30分钟无崩溃/超时/溢出并人工听检；无Node/编译器/开发目录电脑离线启动、导谱、接琴完成练习。检查WebView2部署、许可清单和卸载保留用户数据。\nFiles: docs/validation/m4.md、docs/compatibility.md；未实测项标未完成，不用CI替代硬件。\nReference: docs/project-arrangement-review.md。状态open表示未来安排，不代表可立即派工。",
+    "project": null
+  },
+  {
+    "title": "M5 规划日常版：等待、渐进提速、分轨与趋势",
+    "notes": "Owner: Codex先拆有界任务，Claude/Pi按原生/前端边界实现。\nDepends: M4独立放行。\nGate: 等待模式暂停/重排伴奏且不展示连续节奏成绩；轮次边界渐进提速；错音重练、基础练习扩展、分轨回放、每日目标与历史趋势逐项验收；自定义调弦/设备扩展另建兼容证据。\nScope: 框架M5；M6和弦/技巧评分、自动转谱/跨平台仍不承诺。\nReference: docs/project-arrangement-review.md。状态open表示未来安排，不代表可立即派工。",
+    "project": null
+  }
+]

@@ -59,11 +59,6 @@ CMakeUserPresets.json
 compile_commands.json
 .ninja_*
 
-# Vendored JUCE framework (locked tag 9.0.3); do not track upstream source
-/JUCE/
-# Build-time copy of frontend dist next to the exe
-/ui/
-
 # Authorized score fixtures for every MVP format
 !tests/score-fixtures/**/*.gp3
 !tests/score-fixtures/**/*.gp4

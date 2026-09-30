@@ -1,0 +1,211 @@
+[
+    {
+        "id":  "5ff45a17-80de-4a40-9d12-849ed1abf15c",
+        "number":  7,
+        "project":  null,
+        "status":  "ready",
+        "title":  "M0 验证工具链、双端骨架与真实桥接",
+        "notes":  "Owner: Claude：工具链/CMake/JUCE/WebView2；Pi：React/Vite/桥接客户端；Codex：契约及联调审查\nDepends: 无；首项。前置子项须有负责人认可的验收证据。\nFiles: CMakeLists.txt、CMakePresets.json、native/app/、native/bridge/、frontend/、contracts/、.github/workflows/、licenses/\nGate: 先核对MSVC/SDK/CMake/PATH和WebView2，再锁依赖；先共同冻结envelope，再双端分目录并行。真实WebView2本地页面一次request/reply；版本/未知命令/错误关联验证；CMake、前端typecheck/test/build实际输出和Windows CI。记录许可/SoundFont来源。alphaTab留T11，不把mock当真实桥接。\nReference: docs/project-arrangement-review.md；修改已有文件先备份。一次只派一个有界子任务，不commit/push，不自动继续后续任务。",
+        "steps":  [
+                      {
+                          "id":  "463960e7-fcd7-4ea3-854b-f8a8a061acc2",
+                          "done":  false,
+                          "short_id":  "4",
+                          "text":  "验证 CMakeLists.txt 原生 app 骨架"
+                      },
+                      {
+                          "id":  "dd0ffcbd-174c-4f96-b490-0d6abe0e5c99",
+                          "done":  false,
+                          "short_id":  "d",
+                          "text":  "验证 frontend Vite 配置"
+                      },
+                      {
+                          "id":  "f8ae4131-5fb8-4fbe-953b-b7efe6efbe28",
+                          "done":  false,
+                          "short_id":  "f",
+                          "text":  "验证桥接 ping-pong 通路"
+                      }
+                  ],
+        "thread":  null
+    },
+    {
+        "id":  "3255f795-d652-49eb-82f1-be9aba7bd7a8",
+        "number":  8,
+        "project":  null,
+        "status":  "open",
+        "title":  "M0 验证 GE200 设备输入与真实 RMS",
+        "notes":  "Owner: Claude设备/采集，Pi最小电平显示\nDepends: T7。前置子项须有负责人认可的验收证据。\nFiles: native/audio/、frontend/设备显示、docs/validation/ge200.md\nGate: MOOER GE200非Pro/Plus；记录Windows/固件/驱动/端点/通道/实际采样率缓冲；验证USB干声、无信号/削波；同设备输入输出。未接硬件可做模拟，但本项实机部分不能放行。不安装或切换驱动/音色。\nReference: docs/project-arrangement-review.md；修改已有文件先备份。一次只派一个有界子任务，不commit/push，不自动继续后续任务。",
+        "steps":  [
+
+                  ],
+        "thread":  null
+    },
+    {
+        "id":  "ad425b1b-adc8-49a1-812c-23cae9e2fbe0",
+        "number":  9,
+        "project":  null,
+        "status":  "open",
+        "title":  "M1 验证 DSP 离线算法并接入实时调音器",
+        "notes":  "Owner: Claude DSP/离线工具，Pi调音器/指板候选\nDepends: T17, T10。前置子项须有负责人认可的验收证据。\nFiles: native/dsp/、tests/audio-fixtures/、frontend/调音显示\nGate: 先离线后接同一实时算法；至少200独立干净单音事件，稳态有效帧95%在±25音分内且有效覆盖率目标95%；起音precision/recall各90%；六弦/低音/同音连弹/噪声分别报告；音高反馈P95目标120ms。调参/最终验证集分开，真实拨弦不能用合成音替代。\nReference: docs/project-arrangement-review.md；修改已有文件先备份。一次只派一个有界子任务，不commit/push，不自动继续后续任务。",
+        "steps":  [
+
+                  ],
+        "thread":  null
+    },
+    {
+        "id":  "1d6e0696-df41-4f5a-927e-ac77b1cce248",
+        "number":  10,
+        "project":  null,
+        "status":  "open",
+        "title":  "M1 实现干声缓冲、WAV 录音与监听基础",
+        "notes":  "Owner: Claude，Pi仅承担明确派发的录音控件\nDepends: T17, T8。前置子项须有负责人认可的验收证据。\nFiles: native/audio/、native/storage/录音写入、tests/audio-fixtures/\nGate: 预分配队列、磁盘线程写WAV并可回读；回调无IO/锁/不可控分配；溢出/拔插标audioGap；直通/软件监听路径可选择且不双路叠加。为T9提供连续样本和时间戳，完整回放在T20。\nReference: docs/project-arrangement-review.md；修改已有文件先备份。一次只派一个有界子任务，不commit/push，不自动继续后续任务。",
+        "steps":  [
+
+                  ],
+        "thread":  null
+    },
+    {
+        "id":  "f49f82b5-2891-477f-a344-604b899bcba3",
+        "number":  11,
+        "project":  null,
+        "status":  "open",
+        "title":  "M0 验证 GP5/GP 导入、六线谱与音轨",
+        "notes":  "Owner: Pi；Claude复核DTO消费\nDepends: T7。前置子项须有负责人认可的验收证据。\nFiles: frontend/src/score-adapter/、frontend/谱面、tests/score-fixtures/\nGate: 自制/获授权GP5和GP各一个；锁alphaTab和npm依赖；渲染六线谱，核对轨道/调弦/变调夹/弦序。保留来源哈希和版本；public API不足记录限制。T7前端/契约子项验收后可先做离线原型，不必等设备。\nReference: docs/project-arrangement-review.md；修改已有文件先备份。一次只派一个有界子任务，不commit/push，不自动继续后续任务。",
+        "steps":  [
+
+                  ],
+        "thread":  null
+    },
+    {
+        "id":  "854e100c-7af4-471b-9007-992c4992e847",
+        "number":  12,
+        "project":  null,
+        "status":  "open",
+        "title":  "M0 验证播放展开、MIDI 与目标身份映射",
+        "notes":  "Owner: Pi唯一实现ScorePlaybackAdapter；Claude时间语义复核；Codex验收\nDepends: T11。前置子项须有负责人认可的验收证据。\nFiles: frontend/src/score-adapter/、tests/score-fixtures/、contracts/（本任务Pi唯一写入）\nGate: 同一次展开产出MIDI/TrainingTarget/谱面映射；sourceNoteId/sourceBeatId/occurrenceId稳定。核对反复/一二结尾/延音/tempo map/PPQ/三连音/多声部；复杂跳转不可靠时明确禁用评分。DTO不含alphaTab对象。\nReference: docs/project-arrangement-review.md；修改已有文件先备份。一次只派一个有界子任务，不commit/push，不自动继续后续任务。",
+        "steps":  [
+
+                  ],
+        "thread":  null
+    },
+    {
+        "id":  "d327647b-4fc1-443e-97f1-4d4d843d2396",
+        "number":  13,
+        "project":  null,
+        "status":  "open",
+        "title":  "M0 验证原生伴奏、节拍器与外部时钟光标",
+        "notes":  "Owner: Claude原生调度/TinySoundFont，Pi原生位置驱动光标\nDepends: T7, T8, T12。前置子项须有负责人认可的验收证据。\nFiles: native/transport/、native/audio/、frontend/光标、tests/integration/（逐子项指定写入者）\nGate: 唯一原生样本时钟；授权音色；浏览器训练音频关闭；样本偏移调度/tempo map/epoch。10分钟含变速/反复，视觉误差目标≤50ms且无累积漂移。真实声音与谱面比对，mock只能单元验证。\nReference: docs/project-arrangement-review.md；修改已有文件先备份。一次只派一个有界子任务，不commit/push，不自动继续后续任务。",
+        "steps":  [
+
+                  ],
+        "thread":  null
+    },
+    {
+        "id":  "fc90d8b5-e49e-4d54-b6c9-cf83631c97d5",
+        "number":  14,
+        "project":  null,
+        "status":  "open",
+        "title":  "M3 实现延迟校准、单音匹配与训练反馈",
+        "notes":  "Owner: Claude校准/匹配，Pi反馈，Codex独立复核\nDepends: T9, T10, T15, T19。前置子项须有负责人认可的验收证据。\nFiles: native/practice/、native/transport/、frontend/反馈、tests/audio-fixtures/、docs/calibration.md\nGate: ≥10标注练习录音；offsetSamples符号测试；一次起音只命中一次，同音连弹需新起音，延音不重拨；弱信号保留分母，技术缺口暂停；技巧排除与覆盖率分开；命中/错音/漏音/额外音/提前滞后/无法判定分项报告。无回环不冒充纯硬件延迟。\nReference: docs/project-arrangement-review.md；修改已有文件先备份。一次只派一个有界子任务，不commit/push，不自动继续后续任务。",
+        "steps":  [
+
+                  ],
+        "thread":  null
+    },
+    {
+        "id":  "f8db6bea-8d2f-458d-8e88-50b9c2235ab0",
+        "number":  15,
+        "project":  null,
+        "status":  "open",
+        "title":  "M2 实现 A–B 循环、变速、静音与计入",
+        "notes":  "Owner: Claude播放状态机，Pi操作控件\nDepends: T18, T12, T13。前置子项须有负责人认可的验收证据。\nFiles: native/transport/、frontend/播放控件、tests/integration/\nGate: 边界note-off/踏板/残音清理、延音截断或恢复规则；seek/loop/speed epoch使旧检测失效；tempo map按比例积分；目标轨静音、预备拍及操作状态反馈；训练成绩另由T14完成。\nReference: docs/project-arrangement-review.md；修改已有文件先备份。一次只派一个有界子任务，不commit/push，不自动继续后续任务。",
+        "steps":  [
+
+                  ],
+        "thread":  null
+    },
+    {
+        "id":  "1949e878-536a-426a-a3eb-75007d57fe0a",
+        "number":  16,
+        "project":  null,
+        "status":  "open",
+        "title":  "M4 完成持久化、历史、诊断与离线安装包",
+        "notes":  "Owner: Claude SQLite/配置/打包，Pi设置/曲库历史\nDepends: T20, T19。前置子项须有负责人认可的验收证据。\nFiles: native/storage/、frontend/、packaging/、licenses/、docs/兼容与诊断\nGate: 会话固化哈希/算法/阈值/调弦/校准/速度；SQLite迁移/恢复；诊断不附完整音频；WebView2离线方案，许可及SoundFont再核对；卸载保留用户曲库/录音。T21独立实机放行。\nReference: docs/project-arrangement-review.md；修改已有文件先备份。一次只派一个有界子任务，不commit/push，不自动继续后续任务。",
+        "steps":  [
+
+                  ],
+        "thread":  null
+    },
+    {
+        "id":  "c7fc74d5-3253-4033-8537-65041f6d0883",
+        "number":  17,
+        "project":  null,
+        "status":  "open",
+        "title":  "M0 放行：GE200、谱面映射与原生同步",
+        "notes":  "Owner: Codex 验收；Claude/Pi 提交证据。\nDepends: T8、T12、T13；须有前置验收通过的证据。\nGate: GE200真实干声稳定采集；反复occurrence一一映射；原生伴奏与谱面一致。记录固件/驱动/通道/采样率缓冲及误差。没有实机不能放行。\nFiles: docs/validation/m0.md；只记录实际结果，失败先缩小支持范围，不进入M1整合。\nReference: docs/project-arrangement-review.md。状态open表示未来安排，不代表可立即派工。",
+        "steps":  [
+
+                  ],
+        "thread":  null
+    },
+    {
+        "id":  "dcd790ed-9f66-4571-b10e-7e3b55bbacfc",
+        "number":  18,
+        "project":  null,
+        "status":  "open",
+        "title":  "M1 完成设备向导、档案与故障恢复",
+        "notes":  "Owner: Claude设备/档案，Pi向导/提示。\nDepends: T17、T8、T9、T10；须有前置验收通过的证据。\nGate: 首次设备配置、背景噪声、增益/削波、监听路径；设备占用/拔插/采样率变化/睡眠恢复可解释恢复，校准档案变化失效。\nFiles: native/audio/、native/storage/、frontend/；按子项指定写入者。\nReference: docs/project-arrangement-review.md。状态open表示未来安排，不代表可立即派工。",
+        "steps":  [
+
+                  ],
+        "thread":  null
+    },
+    {
+        "id":  "bc27b7d6-6e04-4397-b96c-dc83ea3950d2",
+        "number":  19,
+        "project":  null,
+        "status":  "open",
+        "title":  "M2 完成各格式兼容、安全导入和曲库基础",
+        "notes":  "Owner: Pi导入/谱例；Claude文件限额/索引；Codex复核。\nDepends: T18、T11、T12；须有前置验收通过的证据。\nGate: GP3/GP4/GP5/GPX/GP每类至少3个自制或授权样本；GP8单独验收；变调夹/移调/多声部/三连音/延音/反复预期；坏文件、解压体积条目限制、异常路径拒绝。曲库基础索引。\nFiles: frontend/src/score-adapter/、tests/score-fixtures/、native/storage/、docs/compatibility.md；共享契约唯一写入者。\nReference: docs/project-arrangement-review.md。状态open表示未来安排，不代表可立即派工。",
+        "steps":  [
+
+                  ],
+        "thread":  null
+    },
+    {
+        "id":  "b1cb8d07-3dd6-4dbc-a5a2-636333ed4cfa",
+        "number":  20,
+        "project":  null,
+        "status":  "open",
+        "title":  "M3 完成基础练习、录音回放与界面闭环",
+        "notes":  "Owner: Pi基础练习/界面，Claude回放/节拍器。\nDepends: T14；须有前置验收通过的证据。\nGate: 爬格子/音阶/节奏练习；BPM、拍号、重音、细分和计入；干声录音可回放。完成导谱选轨调弦到错音循环流程；快捷键不抢输入框，高DPI/缩放/深浅主题/色盲反馈。\nFiles: frontend/、native/audio/、native/transport/、resources/；自带内容记录授权。\nReference: docs/project-arrangement-review.md。状态open表示未来安排，不代表可立即派工。",
+        "steps":  [
+
+                  ],
+        "thread":  null
+    },
+    {
+        "id":  "32255908-7ae7-4f75-b11a-ad1fa8824a64",
+        "number":  21,
+        "project":  null,
+        "status":  "open",
+        "title":  "M4 独立验收：GE200稳定性与干净机离线安装",
+        "notes":  "Owner: Codex放行；Claude/Pi分别供证与修复。\nDepends: T16；须有前置验收通过的证据。\nGate: 框架§13全部指标和支持矩阵；真实GE200连续30分钟无崩溃/超时/溢出并人工听检；无Node/编译器/开发目录电脑离线启动、导谱、接琴完成练习。检查WebView2部署、许可清单和卸载保留用户数据。\nFiles: docs/validation/m4.md、docs/compatibility.md；未实测项标未完成，不用CI替代硬件。\nReference: docs/project-arrangement-review.md。状态open表示未来安排，不代表可立即派工。",
+        "steps":  [
+
+                  ],
+        "thread":  null
+    },
+    {
+        "id":  "bcc4a69c-711a-42bb-ad93-702e5ad0321f",
+        "number":  22,
+        "project":  null,
+        "status":  "open",
+        "title":  "M5 规划日常版：等待、渐进提速、分轨与趋势",
+        "notes":  "Owner: Codex先拆有界任务，Claude/Pi按原生/前端边界实现。\nDepends: T21；须有前置验收通过的证据。\nGate: 等待模式暂停/重排伴奏且不展示连续节奏成绩；轮次边界渐进提速；错音重练、基础练习扩展、分轨回放、每日目标与历史趋势逐项验收；自定义调弦/设备扩展另建兼容证据。\nScope: 框架M5；M6和弦/技巧评分、自动转谱/跨平台仍不承诺。\nReference: docs/project-arrangement-review.md。状态open表示未来安排，不代表可立即派工。",
+        "steps":  [
+
+                  ],
+        "thread":  null
+    }
+]

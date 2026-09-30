@@ -1,0 +1,9 @@
+{
+  "protocolVersion": 1,
+  "requestId": null,
+  "ok": false,
+  "error": {
+    "code": "E_MALFORMED_REQUEST",
+    "message": "request could not be parsed or requestId invalid; no requestId extractable"
+  }
+}
