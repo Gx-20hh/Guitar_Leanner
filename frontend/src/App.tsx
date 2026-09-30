@@ -9,6 +9,7 @@ import { usePracticeStore } from "./store/scoreStore";
 import { TrainingPanel, type TrainingStats } from "./TrainingPanel";
 import { MetronomeDialog } from "./MetronomeDialog";
 import { TuningPanel } from "./TuningPanel";
+import { ScoreTuner } from "./ScoreTuner";
 
 /** 调音 mock（EADGBE 六弦，MIDI 值；原生调音接入后替换为实测频率与目标频率）。 */
 const MOCK_TUNING = [64, 59, 55, 50, 45, 40];
@@ -273,6 +274,10 @@ export function App() {
       <div className="spacer" />
 
       <TuningPanel frequencies={MOCK_TUNING} targets={MOCK_TUNING} />
+
+      <div className="spacer" />
+
+      <ScoreTuner currentNote="E2" cent={-5} />
 
       <div className="spacer" />
 

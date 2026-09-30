@@ -1,4 +1,4 @@
-﻿#include <cassert>
+#include <cassert>
 #include <cstdio>
 #include "../native/transport/transport.cpp"
 
@@ -71,6 +71,7 @@ int main() {
   dummy.buffer = nullptr;
   dummy.startSample = 0;
   dummy.numSamples = 256;
+  dummy.buffer = nullptr; // ensure null-buffer guard fires
   t.getNextAudioBlock(dummy);
   t.stop();
   t.clearLoop();
