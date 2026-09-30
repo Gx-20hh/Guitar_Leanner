@@ -5,8 +5,7 @@ import { ScoreBoard } from "./score/ScoreBoard";
 import { importGpToIsr } from "./parser/importer";
 import { expandScore } from "./score/ScorePlaybackAdapter";
 import { PracticeBoard } from "./PracticeBoard";
-import type { InternalScore } from "./parser/isr";
-import type { PlaybackExpansion } from "./score/playbackTypes";
+import { usePracticeStore } from "./store/scoreStore";
 
 const SCRIPTS: Array<{ name: string; purpose: string }> = [
   { name: "npm run dev", purpose: "启动本地 Vite 开发服务器" },
@@ -29,20 +28,23 @@ const READOUTS: Readout[] = [
 ];
 
 function PracticePanel() {
-  const [state, setState] = useState<{ isr: InternalScore; expansion: PlaybackExpansion } | null>(null);
-  const [practError, setPractError] = useState<string | null>(null);
   const [pulse, setPulse] = useState(false);
+  const isr = usePracticeStore((s) => s.isr);
+  const expansion = usePracticeStore((s) => s.expansion);
+  const importer = usePracticeStore((s) => s.importer);
+  const setLoading = usePracticeStore((s) => s.setLoading);
+  const setImported = usePracticeStore((s) => s.setImported);
+  const setImportError = usePracticeStore((s) => s.setImportError);
 
   function onFile(file: File) {
-    setPractError(null);
+    setLoading(file.name);
     file
       .arrayBuffer()
       .then((buffer) => importGpToIsr(new Uint8Array(buffer)))
-      .then((isr) => {
-        setState({ isr, expansion: expandScore(isr) });
-        setPulse(false);
-      })
-      .catch((caught: Error) => setPractError(caught instanceof Error ? caught.message : String(caught)));
+      .then((score) => setImported(file.name, score, expandScore(score)))
+      .catch((caught: Error) =>
+        setImportError(file.name, caught instanceof Error ? caught.message : String(caught)),
+      );
   }
 
   return (
@@ -59,15 +61,21 @@ function PracticePanel() {
             if (file) onFile(file);
           }}
         />
-        {practError ? <p className="err">{practError}</p> : <p>导入谱面 → ISR → 播放展开 → 指板高亮</p>}
+        {importer.kind === "error" ? (
+          <p className="err">{importer.message}</p>
+        ) : (
+          <p>导入谱面 → ISR → 播放展开 → 指板高亮</p>
+        )}
       </div>
       <div className="pulseRow">
         <button type="button" onClick={() => setPulse((prev) => !prev)}>
           节拍脉冲（视觉指示，不发声）
         </button>
       </div>
-      {state ? (
-        <PracticeBoard isr={state.isr} expansion={state.expansion} pulse={pulse} />
+      {isr && expansion ? (
+        <PracticeBoard isr={isr} expansion={expansion} pulse={pulse} />
+      ) : importer.kind === "loading" ? (
+        <div className="tab">载入中…</div>
       ) : (
         <div className="tab">（未载入谱面）</div>
       )}
