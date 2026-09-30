@@ -10,9 +10,13 @@ import { TrainingPanel, type TrainingStats } from "./TrainingPanel";
 import { MetronomeDialog } from "./MetronomeDialog";
 import { TuningPanel } from "./TuningPanel";
 import { ScoreTuner } from "./ScoreTuner";
+import { scaleDrill, type ScalePosition } from "./ScaleDrill";
 
 /** 调音 mock（EADGBE 六弦，MIDI 值；原生调音接入后替换为实测频率与目标频率）。 */
 const MOCK_TUNING = [64, 59, 55, 50, 45, 40];
+
+/** 音阶 mock（C major 在标准调弦上的指板位置）。 */
+const MOCK_SCALE = scaleDrill("C", "major", MOCK_TUNING);
 
 /** 练习 mock 成绩（原生评分接入后替换）。 */
 const mockStats: TrainingStats = { hits: 0, misses: 0, extras: 0, early: 0, late: 0, total: 0 };
@@ -36,6 +40,34 @@ const READOUTS: Readout[] = [
   { label: "音频 / 评分", value: "未接入", hint: "归原生端，前端不拥有音频时钟" },
   { label: "参考设备", value: "MOOER GE200（未实机验收）", hint: "未连接、无驱动安装、未测通道" },
 ];
+
+/** 指板音阶展示（mock 数据由 App 传入；原生评分接入后替换）。 */
+function ScaleExplorer({ positions }: { positions: ScalePosition[] }) {
+  const byKey = new Map(positions.map((pos) => [`${pos.string}-${pos.fret}`, pos]));
+  return (
+    <section className="board" data-testid="scaleExplorer">
+      <h2>音阶探索（C major）</h2>
+      <div className="scaleGrid" data-testid="scaleGrid">
+        {Array.from({ length: 16 }, (_, fretIndex) => (
+          <div className="scaleFretCol" data-fret={fretIndex} key={fretIndex}>
+            {Array.from({ length: 6 }, (_, stringIndex) => {
+              const stringNumber = stringIndex + 1;
+              const hit = byKey.has(`${stringNumber}-${fretIndex}`);
+              return (
+                <span
+                  key={stringIndex}
+                  className={hit ? "scaleMarker" : "scaleCell"}
+                  data-string={stringNumber}
+                  data-fret={fretIndex}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function PracticePanel() {
   const [pulse, setPulse] = useState(false);
@@ -282,6 +314,10 @@ export function App() {
       <div className="spacer" />
 
       <PracticePanel />
+
+      <div className="spacer" />
+
+      <ScaleExplorer positions={MOCK_SCALE} />
 
       {practiceIsr ? (
         <>
