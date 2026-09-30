@@ -1,11 +1,15 @@
 #include "transport.h"
 #include "tsf.h"
 #include "tml.h"
+#include "audio/wav_recorder.h"
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <vector>
 
 static const int kPpq = 960;
+
+namespace audio = guitar_learner::audio;
 
 struct ActiveNote {
   int endTick;
@@ -32,6 +36,11 @@ struct Transport::Impl {
   bool loopOn = false;
   int loopStart = 0, loopEnd = 0;
   CursorCallback cb;
+
+  // WAV recorder (background-thread disk writer).
+  std::unique_ptr<audio::WavRecorder> recorder;
+  std::atomic<audio::WavRecorder*> recorderAtomic{nullptr};
+  std::atomic<int> recorderInputChannels{1};
 
   void closeSoundFont() {
     if (soundFont) {
@@ -133,6 +142,9 @@ void Transport::shutdown() {
   juce::ScopedLock l(impl_->lock);
   impl_->playing = false;
   impl_->activeNotes.clear();
+  impl_->recorderAtomic.store(nullptr, std::memory_order_release);
+  if (impl_->recorder)
+    impl_->recorder->stopRecording();
   if (impl_->soundFont)
     tsf_note_off_all(impl_->soundFont);
   impl_->closeSoundFont();
@@ -226,6 +238,49 @@ int Transport::currentTick() const { return (int)impl_->currentTick; }
 double Transport::positionSeconds() const { return impl_->tickToSec((int)impl_->currentTick); }
 double Transport::speedRatio() const { return impl_->speed; }
 void Transport::setCursorCallback(CursorCallback c) { impl_->cb = std::move(c); }
+
+void Transport::startRecording(const char* filePath, int inputChannels) {
+  juce::ScopedLock l(impl_->lock);
+  if (!impl_->recorder)
+    impl_->recorder = std::make_unique<audio::WavRecorder>();
+  else
+    impl_->recorder->stopRecording();
+
+  impl_->recorderInputChannels.store(inputChannels, std::memory_order_release);
+  impl_->recorder->startRecording(filePath, impl_->sampleRate, inputChannels);
+  impl_->recorderAtomic.store(impl_->recorder.get(), std::memory_order_release);
+}
+
+void Transport::stopRecording() {
+  juce::ScopedLock l(impl_->lock);
+  impl_->recorderAtomic.store(nullptr, std::memory_order_release);
+  if (impl_->recorder)
+    impl_->recorder->stopRecording();
+}
+
+bool Transport::isRecording() const {
+  audio::WavRecorder* r = impl_->recorderAtomic.load(std::memory_order_acquire);
+  return r != nullptr && r->isRecording();
+}
+
+void Transport::captureInput(const juce::AudioSourceChannelInfo& inputBuffer) {
+  audio::WavRecorder* r = impl_->recorderAtomic.load(std::memory_order_acquire);
+  if (!r || !r->isRecording())
+    return;
+  if (!inputBuffer.buffer || inputBuffer.numSamples <= 0)
+    return;
+
+  const int totalCh = inputBuffer.buffer->getNumChannels();
+  const int ch = std::min(totalCh, impl_->recorderInputChannels.load(std::memory_order_acquire));
+  if (ch <= 0)
+    return;
+
+  const float* chPtr[64];
+  for (int i = 0; i < ch; ++i)
+    chPtr[i] = inputBuffer.buffer->getReadPointer(i, inputBuffer.startSample);
+
+  r->writeChannels(chPtr, ch, inputBuffer.numSamples);
+}
 
 void Transport::getNextAudioBlock(const juce::AudioSourceChannelInfo& buf) {
   if (!buf.buffer) {

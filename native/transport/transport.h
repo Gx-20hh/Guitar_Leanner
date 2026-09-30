@@ -60,6 +60,14 @@ public:
   double speedRatio() const;
   using CursorCallback = std::function<void(const CursorEvent&)>;
   void setCursorCallback(CursorCallback cb);
+
+  // WAV recording (background-thread disk writer). Input capture is fed from
+  // the audio callback via captureInput(); getNextAudioBlock handles output.
+  void startRecording(const char* filePath, int inputChannels = 1);
+  void stopRecording();
+  bool isRecording() const;
+  void captureInput(const juce::AudioSourceChannelInfo& inputBuffer);
+
   void prepareToPlay(int samplesPerBlock, double sampleRate) {}
   void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill);
   void releaseResources() {}

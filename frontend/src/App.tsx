@@ -29,12 +29,16 @@ const READOUTS: Readout[] = [
 
 function PracticePanel() {
   const [pulse, setPulse] = useState(false);
+  const [saveName, setSaveName] = useState("");
   const isr = usePracticeStore((s) => s.isr);
   const expansion = usePracticeStore((s) => s.expansion);
   const importer = usePracticeStore((s) => s.importer);
   const setLoading = usePracticeStore((s) => s.setLoading);
   const setImported = usePracticeStore((s) => s.setImported);
   const setImportError = usePracticeStore((s) => s.setImportError);
+  const library = usePracticeStore((s) => s.library);
+  const addToLibrary = usePracticeStore((s) => s.addToLibrary);
+  const loadFromLibrary = usePracticeStore((s) => s.loadFromLibrary);
 
   function onFile(file: File) {
     setLoading(file.name);
@@ -79,6 +83,36 @@ function PracticePanel() {
       ) : (
         <div className="tab">（未载入谱面）</div>
       )}
+      <div className="saveRow">
+        <input
+          value={saveName}
+          placeholder="曲名"
+          onChange={(event) => setSaveName(event.currentTarget.value)}
+        />
+        <button type="button" onClick={() => {
+          const name = saveName.trim() || "未命名";
+          addToLibrary(name);
+          setSaveName("");
+        }}>
+          保存到曲库
+        </button>
+      </div>
+      <section className="library" data-testid="librarySidebar">
+        <h3>曲库（点击载入）</h3>
+        {library.length === 0 ? (
+          <p>（空）</p>
+        ) : (
+          <ul>
+            {library.map((item) => (
+              <li key={item.id}>
+                <button type="button" onClick={() => loadFromLibrary(item.id)}>
+                  {item.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </section>
   );
 }

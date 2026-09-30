@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { InternalScore } from "../parser/isr";
 import type { PlaybackExpansion } from "../score/playbackTypes";
+import { expandScore } from "../score/ScorePlaybackAdapter";
 
 /** 曲库条目：保存的谱面。 */
 export interface LibraryItem {
@@ -36,6 +37,8 @@ export interface PracticeStore {
   addToLibrary: (name: string) => void;
   /** 从曲库移除指定条目。 */
   removeFromLibrary: (id: string) => void;
+  /** 从曲库载入到当前（isr + 展开 + importer.done）。 */
+  loadFromLibrary: (id: string) => void;
 }
 
 let librarySequence = 0;
@@ -67,6 +70,16 @@ export const usePracticeStore = create<PracticeStore>()(
       removeFromLibrary: (id) => {
         const { library } = get();
         set({ library: library.filter((entry) => entry.id !== id) });
+      },
+      loadFromLibrary: (id) => {
+        const { library } = get();
+        const item = library.find((entry) => entry.id === id);
+        if (!item) return;
+        set({
+          isr: item.isr,
+          expansion: expandScore(item.isr),
+          importer: { kind: "done", fileName: item.name },
+        });
       },
     }),
     {

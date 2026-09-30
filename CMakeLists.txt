@@ -75,6 +75,7 @@ add_library(guitar_learner_native STATIC
   native/bridge/guitar_bridge_protocol.cpp
   native/audio/rms_meter.cpp
   native/audio/device_input.cpp
+  native/audio/wav_recorder.cpp
 )
 target_include_directories(guitar_learner_native PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/native
@@ -238,3 +239,22 @@ if(MSVC)
 endif()
 add_test(NAME transport_tests COMMAND transport_tests)
 set_tests_properties(transport_tests PROPERTIES TIMEOUT 15)
+
+# T10 WAV recorder unit tests
+add_executable(wav_recorder_tests
+  tests/audio-fixtures/wav_recorder_tests.cpp
+  native/audio/wav_recorder.cpp
+)
+target_include_directories(wav_recorder_tests PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/native
+  ${CMAKE_CURRENT_SOURCE_DIR}/native/audio
+  ${JUCE_SOURCE_DIR}/modules
+)
+target_link_libraries(wav_recorder_tests PRIVATE
+  juce::juce_core
+)
+if(MSVC)
+  target_compile_options(wav_recorder_tests PRIVATE /W4 /permissive-)
+endif()
+add_test(NAME wav_recorder_tests COMMAND wav_recorder_tests)
+set_tests_properties(wav_recorder_tests PROPERTIES TIMEOUT 15)
