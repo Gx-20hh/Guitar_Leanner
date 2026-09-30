@@ -37,8 +37,8 @@ static bool isValidRequestId (const juce::String& s)
     bool asciiOnly = true;
     for (juce::CharPointer_UTF8 p = s.toUTF8(); *p != 0; ++p)
     {
-        unsigned char u = static_cast<unsigned char> (*p);
-        if (u < 0x21 || u > 0x7E)
+        juce::juce_wchar c = *p;
+        if (c < 0x21 || c > 0x7E)
         {
             asciiOnly = false;
             break;

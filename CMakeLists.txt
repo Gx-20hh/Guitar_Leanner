@@ -14,6 +14,7 @@ endif()
 
 # 启用 JUCE WebView2 后端（Windows）。JUCE 模块头默认 JUCE_USE_WIN_WEBVIEW2=0，
 # 需在 add_subdirectory 前全局定义以让其生效（同时作用于 juce_gui_extra 模块与我们的目标）。
+set(JUCE_WEBVIEW2_PACKAGE_LOCATION D:/GuitarLearner/packages CACHE PATH "" FORCE)
 add_compile_definitions(JUCE_USE_WIN_WEBVIEW2=1)
 
 # JUCE 9.0.3 锁定版本。源码来源：官方仓库 tag 9.0.3。
@@ -68,7 +69,8 @@ target_link_libraries(GuitarLearner PRIVATE
   juce::juce_core
 )
 if(MSVC)
-  target_compile_options(GuitarLearner PRIVATE /W4 /permissive-)
+  set_target_properties(GuitarLearner PROPERTIES WIN32_EXECUTABLE TRUE)
+target_compile_options(GuitarLearner PRIVATE /W4 /permissive-)
 endif()
 
 # 复制前端打包产物到 exe 旁 ui/ 目录（仅复制；不修改 frontend 源码）
