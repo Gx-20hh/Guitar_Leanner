@@ -30,6 +30,8 @@ export interface IsrBeat {
   index: number;
   /** 时值：alphaTab Duration 数值枚举（Whole=1, Half=2, Quarter=4, Eighth=8…）。 */
   duration: number;
+  /** 附点数（0-2）。 */
+  dots?: number;
   /** 本拍音符。 */
   notes: IsrNote[];
 }
@@ -64,6 +66,8 @@ export interface IsrMasterBar {
   timeSignatureDenominator: number;
   /** 若存在 tempo automation，该小节的 BPM。 */
   tempoBpm: number | null;
+  /** Tempo automation ticks+BPM within bar. Empty = none. */
+  tempoAutomations?: {tick:number;bpm:number}[]; isRepeatStart?: boolean; repeatCount?: number;
 }
 
 /** 完整 ISR。 */
