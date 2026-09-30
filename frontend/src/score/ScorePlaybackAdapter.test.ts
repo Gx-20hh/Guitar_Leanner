@@ -1,5 +1,5 @@
 ﻿import { describe, expect, it } from "vitest";
-import { model, Settings } from "@coderline/alphatab";
+import { midi, model, Settings } from "@coderline/alphatab";
 import type { InternalScore, IsrTrack, IsrMasterBar, IsrMeasure, IsrBeat, IsrNote } from "../parser/isr.js";
 import { expandScore } from "./ScorePlaybackAdapter.js";
 import type { PlaybackExpansion } from "./playbackTypes.js";
@@ -262,6 +262,164 @@ function expandFromScore(score: model.Score): PlaybackExpansion {
   return expandScore(isr);
 }
 
+/* ---- Boundary: local raw-generator recorder (triplet/alternate/grace provenance, not adapter ISR) ---- */
+
+function rawGenerator(score: model.Score): { noteStarts: number[]; noteKeys: number[]; sourceBars: number[] } {
+  const notes: { start: number; key: number }[] = [];
+  const handler: midi.IMidiFileHandler = {
+    addTimeSignature(): void {},
+    addRest(): void {},
+    addNote(_track: number, start: number, _length: number, key: number, _velocity: number, _channel: number) {
+      notes.push({ start, key });
+    },
+    addControlChange(): void {},
+    addProgramChange(): void {},
+    addTempo(): void {},
+    addNoteBend(): void {},
+    addBend(): void {},
+    finishTrack(): void {},
+    addTickShift(): void {},
+  };
+  score.finish(new Settings());
+  const gen = new midi.MidiFileGenerator(score, new Settings(), handler);
+  gen.generate();
+  return {
+    noteStarts: notes.map((n) => n.start),
+    noteKeys: notes.map((n) => n.key),
+    sourceBars: gen.tickLookup.masterBars.map((e) => e.masterBar.index),
+  };
+}
+
+function tripletBeat(voice: model.Voice, fret: number): void {
+  const beat = new model.Beat();
+  beat.duration = model.Duration.Eighth;
+  beat.tupletNumerator = 3;
+  beat.tupletDenominator = 2;
+  const note = new model.Note();
+  note.string = 6;
+  note.fret = fret;
+  beat.addNote(note);
+  voice.addBeat(beat);
+}
+
+function scoreTripletEighth(): model.Score {
+  const score = new model.Score();
+  const track = newTrack(score, "Guitar");
+  const mb = new model.MasterBar();
+  mb.timeSignatureNumerator = 4;
+  mb.timeSignatureDenominator = 4;
+  score.addMasterBar(mb);
+  const bar = new model.Bar();
+  track.staves[0].addBar(bar);
+  const voice = new model.Voice();
+  bar.addVoice(voice);
+  tripletBeat(voice, 1);
+  tripletBeat(voice, 2);
+  tripletBeat(voice, 3);
+  return score;
+}
+
+function scoreRestBeat(): model.Score {
+  const score = new model.Score();
+  const track = newTrack(score, "Guitar");
+  const mb = new model.MasterBar();
+  mb.timeSignatureNumerator = 4;
+  mb.timeSignatureDenominator = 4;
+  score.addMasterBar(mb);
+  const bar = new model.Bar();
+  track.staves[0].addBar(bar);
+  const voice = new model.Voice();
+  bar.addVoice(voice);
+  const rest = new model.Beat(); // 无音符 → 休止
+  rest.duration = model.Duration.Quarter;
+  voice.addBeat(rest);
+  return score;
+}
+
+function scoreMultiVoice(): model.Score {
+  const score = new model.Score();
+  const track = newTrack(score, "Guitar");
+  const mb = new model.MasterBar();
+  mb.timeSignatureNumerator = 4;
+  mb.timeSignatureDenominator = 4;
+  score.addMasterBar(mb);
+  const bar = new model.Bar();
+  track.staves[0].addBar(bar);
+  const v0 = new model.Voice();
+  bar.addVoice(v0);
+  const v1 = new model.Voice();
+  bar.addVoice(v1);
+  // v0: string6 fret0 (key64)，v1: string6 fret3 (key67) —— 不同 key，可辨 voice 身份
+  const b0 = new model.Beat();
+  b0.duration = model.Duration.Quarter;
+  const n0 = new model.Note();
+  n0.string = 6;
+  n0.fret = 0;
+  b0.addNote(n0);
+  v0.addBeat(b0);
+  const b1 = new model.Beat();
+  b1.duration = model.Duration.Quarter;
+  const n1 = new model.Note();
+  n1.string = 6;
+  n1.fret = 3;
+  b1.addNote(n1);
+  v1.addBeat(b1);
+  return score;
+}
+
+function scoreGrace(): model.Score {
+  const score = new model.Score();
+  const track = newTrack(score, "Guitar");
+  const mb = new model.MasterBar();
+  mb.timeSignatureNumerator = 4;
+  mb.timeSignatureDenominator = 4;
+  score.addMasterBar(mb);
+  const bar = new model.Bar();
+  track.staves[0].addBar(bar);
+  const voice = new model.Voice();
+  bar.addVoice(voice);
+  const main = new model.Beat();
+  main.duration = model.Duration.Quarter;
+  const mainNote = new model.Note();
+  mainNote.string = 6;
+  mainNote.fret = 0; // key64
+  main.addNote(mainNote);
+  voice.addBeat(main);
+  const grace = new model.Beat();
+  grace.duration = model.Duration.Eighth;
+  const graceNote = new model.Note();
+  graceNote.string = 6;
+  graceNote.fret = 5; // key69（与主音不同，便于观察）
+  grace.addNote(graceNote);
+  voice.addGraceBeat(grace);
+  return score;
+}
+
+function scoreAlternateEndings(): model.Score {
+  const score = new model.Score();
+  const track = newTrack(score, "Guitar");
+  const mb0 = new model.MasterBar();
+  mb0.timeSignatureNumerator = 4;
+  mb0.timeSignatureDenominator = 4;
+  const mb1 = new model.MasterBar();
+  mb1.timeSignatureNumerator = 4;
+  mb1.timeSignatureDenominator = 4;
+  const mb2 = new model.MasterBar();
+  mb2.timeSignatureNumerator = 4;
+  mb2.timeSignatureDenominator = 4;
+  mb0.isRepeatStart = true;
+  mb1.alternateEndings = 1; // 第一结尾
+  mb2.alternateEndings = 2; // 第二结尾
+  mb2.repeatCount = 2;
+  score.addMasterBar(mb0);
+  score.addMasterBar(mb1);
+  score.addMasterBar(mb2);
+  addBar(track);
+  addBar(track);
+  addBar(track);
+  return score;
+}
+
 /* ---- Tests ---- */
 
 describe("ScorePlaybackAdapter: expansion", () => {
@@ -371,5 +529,46 @@ describe("ScorePlaybackAdapter: expansion", () => {
       expect(t.startTick).toBeTruthy();
       expect(t.durationTicks).toBeTruthy();
     }
+  });
+});
+
+describe("ScorePlaybackAdapter: boundary", () => {
+  it("triplet: generator produces starts 0/320/640（adapter ISR 不携带 tuplet，此证明在 generator 层；adapter 缺口见证据）", () => {
+    const raw = rawGenerator(scoreTripletEighth());
+    expect(raw.noteStarts).toEqual([0, 320, 640]);
+  });
+
+  it("alternate endings: generator source sequence 0/1/0/2（adapter ISR 不携带 alternateEndings，此证明在 generator 层）", () => {
+    const raw = rawGenerator(scoreAlternateEndings());
+    expect(raw.sourceBars).toEqual([0, 1, 0, 2]);
+  });
+
+  it("rest beats: no noteOn MIDI events, no targets", () => {
+    const result = expandFromScore(scoreRestBeat());
+    const noteOns = result.midiEvents.filter((e) => e.type === "noteOn");
+    expect(noteOns).toHaveLength(0);
+    expect(result.targets).toHaveLength(0);
+  });
+
+  it("multi-voice: MIDI interleaved, targets carry voice identity in beatSourceKey[3]", () => {
+    const result = expandFromScore(scoreMultiVoice());
+    const noteOns = result.midiEvents.filter((e) => e.type === "noteOn");
+    // 两 voice 各一音，均在 tick0（interleave 于 0；此处音高不同便于按 key 验证）
+    expect(noteOns).toHaveLength(2);
+    expect(noteOns.map((e) => e.key).sort()).toEqual([64, 67]);
+    const voiceSlots = result.targets.map((t) => t.beatSourceKey[3]);
+    expect(voiceSlots).toContain(0);
+    expect(voiceSlots).toContain(1);
+    for (const t of result.targets) {
+      expect(t.grading).toBe("singleNote");
+    }
+  });
+
+  it("grace note: 当前 adapter 不排除（ISR 无 grace 标记，isr.ts 不在本任务可改范围）→ 锁定当前行为并披露缺口", () => {
+    const raw = rawGenerator(scoreGrace());
+    expect(raw.noteKeys).toContain(69); // 原始 generator 确有 grace 音（fret5 key69）
+    const result = expandFromScore(scoreGrace());
+    const targetKeys = result.targets.map((t) => t.soundingMidi);
+    expect(targetKeys).toContain(69); // 现状：grace 落入 beats → 被携带为 target（req5 未满足，披露见 docs/validation/t12-boundary.md）
   });
 });
