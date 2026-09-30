@@ -205,3 +205,20 @@ if(MSVC)
 endif()
 add_test(NAME host_resource_path_tests COMMAND host_resource_path_tests)
 set_tests_properties(host_resource_path_tests PROPERTIES TIMEOUT 15)
+
+# T13 transport unit tests
+add_executable(transport_tests
+  tests/audio-fixtures/transport_tests.cpp
+)
+target_include_directories(transport_tests PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(transport_tests PRIVATE
+  guitar_learner_native
+  juce::juce_core
+)
+if(MSVC)
+  target_compile_options(transport_tests PRIVATE /W4 /permissive-)
+endif()
+add_test(NAME transport_tests COMMAND transport_tests)
+set_tests_properties(transport_tests PROPERTIES TIMEOUT 15)
