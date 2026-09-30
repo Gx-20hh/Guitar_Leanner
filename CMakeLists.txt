@@ -227,6 +227,7 @@ add_executable(transport_tests
 )
 target_include_directories(transport_tests PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
+  ${JUCE_SOURCE_DIR}/modules
 )
 target_link_libraries(transport_tests PRIVATE
   guitar_learner_native
