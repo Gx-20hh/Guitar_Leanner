@@ -7,6 +7,7 @@ import { expandScore } from "./score/ScorePlaybackAdapter";
 import { PracticeBoard } from "./PracticeBoard";
 import { usePracticeStore } from "./store/scoreStore";
 import { TrainingPanel, type TrainingStats } from "./TrainingPanel";
+import { MetronomeDialog } from "./MetronomeDialog";
 
 /** 练习 mock 成绩（原生评分接入后替换）。 */
 const mockStats: TrainingStats = { hits: 0, misses: 0, extras: 0, early: 0, late: 0, total: 0 };
@@ -43,6 +44,9 @@ function PracticePanel() {
   const library = usePracticeStore((s) => s.library);
   const addToLibrary = usePracticeStore((s) => s.addToLibrary);
   const loadFromLibrary = usePracticeStore((s) => s.loadFromLibrary);
+  const metronome = usePracticeStore((s) => s.metronome);
+  const setMetronome = usePracticeStore((s) => s.setMetronome);
+  const [showMetronome, setShowMetronome] = useState(false);
 
   function onFile(file: File) {
     setLoading(file.name);
@@ -79,7 +83,20 @@ function PracticePanel() {
         <button type="button" onClick={() => setPulse((prev) => !prev)}>
           节拍脉冲（视觉指示，不发声）
         </button>
+        <button type="button" onClick={() => setShowMetronome(true)}>节拍器设置</button>
       </div>
+      {showMetronome ? (
+        <MetronomeDialog
+          initialBpm={metronome.bpm}
+          initialBeats={metronome.beats}
+          initialSub={metronome.sub}
+          onApply={(bpm, beats, sub) => {
+            setMetronome(bpm, beats, sub);
+            setShowMetronome(false);
+          }}
+          onClose={() => setShowMetronome(false)}
+        />
+      ) : null}
       {isr && expansion ? (
         <PracticeBoard isr={isr} expansion={expansion} pulse={pulse} />
       ) : importer.kind === "loading" ? (

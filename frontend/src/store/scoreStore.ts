@@ -28,6 +28,8 @@ export interface PracticeStore {
   importer: ImporterState;
   /** 曲库（保存的谱面列表）。 */
   library: LibraryItem[];
+  /** 节拍器设置。 */
+  metronome: { bpm: number; beats: string; sub: string };
 
   setImported: (fileName: string, isr: InternalScore, expansion: PlaybackExpansion) => void;
   setLoading: (fileName: string) => void;
@@ -39,6 +41,8 @@ export interface PracticeStore {
   removeFromLibrary: (id: string) => void;
   /** 从曲库载入到当前（isr + 展开 + importer.done）。 */
   loadFromLibrary: (id: string) => void;
+  /** 应用节拍器设置。 */
+  setMetronome: (bpm: number, beats: string, sub: string) => void;
 }
 
 let librarySequence = 0;
@@ -51,6 +55,7 @@ export const usePracticeStore = create<PracticeStore>()(
       expansion: null,
       importer: { kind: "idle" },
       library: [],
+      metronome: { bpm: 120, beats: "4/4", sub: "1/4" },
       setImported: (fileName, isr, expansion) => set({ isr, expansion, importer: { kind: "done", fileName } }),
       setLoading: (fileName) => set({ importer: { kind: "loading", fileName } }),
       setImportError: (fileName, message) => set({ importer: { kind: "error", fileName, message } }),
@@ -81,6 +86,7 @@ export const usePracticeStore = create<PracticeStore>()(
           importer: { kind: "done", fileName: item.name },
         });
       },
+      setMetronome: (bpm, beats, sub) => set({ metronome: { bpm, beats, sub } }),
     }),
     {
       name: "guitar-practice-library",
