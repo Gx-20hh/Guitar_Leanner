@@ -1,43 +1,21 @@
-#pragma once
-
-#include <atomic>
-#include <cstddef>
+﻿#pragma once
+#include <JuceHeader.h>
+#include <vector>
 #include <memory>
-#include <string>
 
-namespace guitar_learner::audio {
-
-// Background-thread WAV recorder. Audio thread pushes interleaved samples via
-// writeChannels(); disk IO happens only on the internal worker thread.
-class WavRecorder
-{
+class WavRecorder {
 public:
-    WavRecorder();
-    explicit WavRecorder(size_t maxSeconds);
-    ~WavRecorder();
+  WavRecorder();
+  ~WavRecorder();
 
-    WavRecorder(const WavRecorder&) = delete;
-    WavRecorder& operator=(const WavRecorder&) = delete;
+  void startRecording(const juce::File& file, double sampleRate, int numChannels);
+  void stopRecording();
+  bool isRecording() const;
 
-    // Prepares a WAV file at the given sample rate/channel count and launches
-    // the disk writer thread. Returns false for invalid parameters.
-    bool startRecording(const std::string& filePath, double sampleRate, int numChannels);
-
-    // Signals the worker to flush and finish, then joins it.
-    void stopRecording();
-
-    bool isRecording() const noexcept;
-    bool hasError() const noexcept;
-    bool hasOverflowed() const noexcept;
-    std::string lastError() const;
-
-    // Real-time safe. Called from the audio callback. Source channels beyond
-    // numChannels are ignored; missing source channels are written as silence.
-    void writeChannels(const float* const* channelData, int numSourceChannels, int numSamples);
+  // Called from audio callback — non-blocking, just copies samples into ring buffer
+  void pushSamples(const float* const* inputData, int numChannels, int numSamples);
 
 private:
-    struct Impl;
-    std::unique_ptr<Impl> impl_;
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
 };
-
-} // namespace guitar_learner::audio
