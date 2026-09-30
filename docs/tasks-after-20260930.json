@@ -100,27 +100,17 @@
       {
         "id": "p0",
         "done": true,
-        "text": "proof spike: repeat/tempo/timeAt -- all expectations pass"
+        "text": "proof spike: repeat/tempo/timeAt -- all pass"
       },
       {
         "id": "p1",
-        "done": false,
-        "text": "implement ScorePlaybackAdapter: single-pass expand -> MIDI events + TrainingTarget + score mapping"
+        "done": true,
+        "text": "ScorePlaybackAdapter core: 69 tests, expandScore produces MIDI+TrainingTarget+occurrences"
       },
       {
         "id": "p2",
         "done": false,
-        "text": "identity resolution: precise mapping or explicit rejection (unison/multi-voice/grace)"
-      },
-      {
-        "id": "p3",
-        "done": false,
-        "text": "repeat/alt-endings/tempo map + golden table from proof spike"
-      },
-      {
-        "id": "p4",
-        "done": false,
-        "text": "tests + typecheck + build pass"
+        "text": "boundary: alternate endings, multi-voice, triplets, rests, grace notes"
       }
     ],
     "thread": null
@@ -129,10 +119,31 @@
     "id": "d327647b-4fc1-443e-97f1-4d4d843d2396",
     "number": 13,
     "project": null,
-    "status": "open",
+    "status": "started",
     "title": "M0 验证原生伴奏、节拍器与外部时钟光标",
     "notes": "Owner: Claude原生调度/TinySoundFont，Pi原生位置驱动光标\nDepends: T7, T8, T12。前置子项须有负责人认可的验收证据。\nFiles: native/transport/、native/audio/、frontend/光标、tests/integration/（逐子项指定写入者）\nGate: 唯一原生样本时钟；授权音色；浏览器训练音频关闭；样本偏移调度/tempo map/epoch。10分钟含变速/反复，视觉误差目标≤50ms且无累积漂移。真实声音与谱面比对，mock只能单元验证。\nReference: docs/project-arrangement-review.md；修改已有文件先备份。一次只派一个有界子任务，不commit/push，不自动继续后续任务。",
-    "steps": [],
+    "steps": [
+      {
+        "id": "q0",
+        "done": false,
+        "text": "native sample clock + TinySoundFont integration"
+      },
+      {
+        "id": "q1",
+        "done": false,
+        "text": "tempo map tick->sample conversion"
+      },
+      {
+        "id": "q2",
+        "done": false,
+        "text": "cursor events via bridge (barStart/beatTick/noteOn)"
+      },
+      {
+        "id": "q3",
+        "done": false,
+        "text": "seek/loop/speed + tests"
+      }
+    ],
     "thread": null
   },
   {
