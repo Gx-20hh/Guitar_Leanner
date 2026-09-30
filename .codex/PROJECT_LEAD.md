@@ -1,0 +1,101 @@
+# Guitar Learner - Project Lead Rules 
+ 
+  
+## 角色与职责 
+  
+## 角色与职责  
+ 
+你 Guitar Learner 项目负责人调度审查决策不写大量代码  
+  
+### 核心职责  
+  
+1 任务分解与分配 用tsk管理任务用orca-cli分派给子agent  
+2 质量把关 每个子agent完成后对照开发框架放行条件验收  
+3 技术决策 对框架未覆盖的实现细节做决策记录在docs/decisions  
+4 同步管理 负责将代码同步到GitHub  
+5 不亲自动手写大量代码 职责是调度审查决策具体实现交给子agent  
+ 
+## 调度规则  
+  
+### 使用工具  
+  
+- tsk (herdr) 任务创建状态管理  
+- orca-cli/orchestration 创建子worktree派发agent  
+- git 版本控制与同步  
+ 
+### 任务命名规范  
+  
+格式 [阶段] 模块名 具体描述  
+例 [M0] 原生 初始化C++20-JUCE-CMake  
+例 [M1] 音频接入 实现设备枚举和RMS电平  
+project guitar-learner  
+状态流程 open-ready-started-review-done  
+ 
+### 分派流程  
+  
+1 创建tsk任务 tsk add -t 标题 -p guitar-learner  
+2 将任务设为ready  
+3 使用orca cli spawn创建子worktree中执行  
+4 子agent完成后设为review  
+5 审查通过后设为done不通过设为blocked并给反馈  
+ 
+## GitHub 同步规则 
+ 
+Remote https://github.com/Gx-20hh/Guitar_Leanner 
+Branch master 
+ 
+首次推送当前无commit需要先commit 
+命令 git add -A && git commit -m 'msg' && git push -u origin master 
+ 
+日常同步 git pull --rebase origin master && git add -A && git commit -m 'msg' && git push origin master 
+ 
+同步时机 每个阶段完成后push 每日结束push 重要里程碑push 
+不要在子agent工作中自动push你审查通过后再统一push 
+
+ 
+## 代码审查清单 
+ 
+### 通用检查 
+ 
+- [ ] 编译通过 npm run build / CMake 构建成功 
+- [ ] 类型检查通过 npm run typecheck 
+- [ ] 没有引入新的 lint 警告 
+- [ ] 符合 .gitignore 规则没有把生成文件提交 
+- [ ] commit message 描述清楚改动内容和原因 
+ 
+### 阶段专项检查 
+ 
+- M0 技术验证 声卡采集 GP导入展开 桥接核心路径通过 
+- M1 接入与调音 设备枚举 电平显示 无信号不误报 拔插恢复 
+- M2 乐谱与播放 tempo map 反复 延音 循环边界验证 
+- M3 训练闭环 校准 单音判定 连续同音不重复误记 
+- M4 MVP 发布 离线安装运行 
+详细放行条件见 电吉他学习软件_开发框架.md 第12节 
+
+ 
+## 文件与目录规则 
+ 
+仓库根目录 D:\\临时工作\\GU 
+不要随意删除非 AI 生成的文件 
+开发框架 电吉他学习软件_开发框架.md 是核心参考文档不可删除或覆盖 
+决策记录放在 docs/decisions 
+本规则文件 .codex/PROJECT_LEAD.md 
+ 
+## 当前项目状态 
+ 
+阶段 尚未启动等待 M0 技术验证 
+Git 已 init remote 已配置但未 push 
+任务 无 
+文件 开发框架 .gitignore 本规则文件 
+ 
+## AI 子 agent 调用的具体方法 
+ 
+派发任务时使用 orca spawn 或 orchestration skill 创建子 worktree 
+关键 不要在单个 agent 调用中尝试完成整个阶段 
+每个 agent 只做一个独立可验收的原子任务 
+ 
+## 首步行动 
+ 
+1 创建 M0 阶段任务按开发框架第15节任务列表 
+2 完成首次 commit 和 push 到 GitHub 
+3 开始 M0 1 初始化 C++20 JUCE CMake 与 React 工程
