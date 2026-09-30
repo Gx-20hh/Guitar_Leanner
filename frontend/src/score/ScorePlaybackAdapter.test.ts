@@ -24,6 +24,7 @@ function scoreToIsr(score: model.Score): InternalScore {
         const beats: IsrBeat[] = [];
         for (const beat of voice.beats) {
           const notes: IsrNote[] = [];
+          const isGraceBeat = (beat as any).graceType !== 0;
           for (const note of beat.notes) {
             notes.push({
               stringNumber: stringCount - note.string + 1,
@@ -32,9 +33,17 @@ function scoreToIsr(score: model.Score): InternalScore {
               dynamics: 6,
               techniques: [],
               isTieDestination: note.isTieDestination,
+              isGrace: isGraceBeat,
             });
           }
-          beats.push({ index: beat.voice.beats.indexOf(beat), duration: durationNumber(beat.duration), dots: (beat as any).dots ?? 0, notes });
+          beats.push({
+            index: beat.voice.beats.indexOf(beat),
+            duration: durationNumber(beat.duration),
+            dots: (beat as any).dots ?? 0,
+            tupletNumerator: (beat as any).tupletNumerator,
+            tupletDenominator: (beat as any).tupletDenominator,
+            notes,
+          });
         }
         voices.push(beats);
       }
@@ -57,7 +66,7 @@ function scoreToIsr(score: model.Score): InternalScore {
       index: mb.index,
       timeSignatureNumerator: mb.timeSignatureNumerator,
       timeSignatureDenominator: mb.timeSignatureDenominator,
-      tempoBpm: score.tempo, isRepeatStart: mb.isRepeatStart ?? false, repeatCount: mb.repeatCount ?? 0, tempoAutomations: ((mb.tempoAutomations??[])as any[]).map((a:any)=>({tick:Math.round(960*4*mb.timeSignatureNumerator/mb.timeSignatureDenominator*(a.ratioPosition??0)),bpm:a.value})),
+      tempoBpm: score.tempo, isRepeatStart: mb.isRepeatStart ?? false, repeatCount: mb.repeatCount ?? 0, alternateEndings: (mb as any).alternateEndings ?? 0, tempoAutomations: ((mb.tempoAutomations??[])as any[]).map((a:any)=>({tick:Math.round(960*4*mb.timeSignatureNumerator/mb.timeSignatureDenominator*(a.ratioPosition??0)),bpm:a.value})),
     });
   }
 
@@ -533,12 +542,12 @@ describe("ScorePlaybackAdapter: expansion", () => {
 });
 
 describe("ScorePlaybackAdapter: boundary", () => {
-  it("triplet: generator produces starts 0/320/640（adapter ISR 不携带 tuplet，此证明在 generator 层；adapter 缺口见证据）", () => {
+  it("triplet（generator 溯源）：起音 0/320/640", () => {
     const raw = rawGenerator(scoreTripletEighth());
     expect(raw.noteStarts).toEqual([0, 320, 640]);
   });
 
-  it("alternate endings: generator source sequence 0/1/0/2（adapter ISR 不携带 alternateEndings，此证明在 generator 层）", () => {
+  it("alternate endings（generator 溯源）：源序列 0/1/0/2", () => {
     const raw = rawGenerator(scoreAlternateEndings());
     expect(raw.sourceBars).toEqual([0, 1, 0, 2]);
   });
@@ -564,11 +573,43 @@ describe("ScorePlaybackAdapter: boundary", () => {
     }
   });
 
-  it("grace note: 当前 adapter 不排除（ISR 无 grace 标记，isr.ts 不在本任务可改范围）→ 锁定当前行为并披露缺口", () => {
+  it("grace note: 从 TrainingTarget 排除（adapter 依 ISR note.isGrace 剔除；直接 ISR 构造不受 addGraceBeat 无标记限制）", () => {
+    // alphaTab 程序化 addGraceBeat 生成的 grace 拍 graceType=0（探测实证）→ 无法从模型自动标 grace；
+    // 适配器排除逻辑依赖 ISR 的 isGrace。此处直接构造 ISR（grace 音 isGrace=true + 主音）调 expandScore。
+    const isr: InternalScore = {
+      title: "T", subTitle: "", artist: "", tempo: 120,
+      masterBars: [{ index: 0, timeSignatureNumerator: 4, timeSignatureDenominator: 4, tempoBpm: 120 }],
+      tracks: [{
+        index: 0, name: "Guitar", stringCount: 6, tuning: [64, 59, 55, 50, 45, 40], capo: 0,
+        measures: [{
+          trackIndex: 0, index: 0,
+          voices: [[{
+            index: 0, duration: 4, notes: [
+              { stringNumber: 6, fret: 5, midi: 69, dynamics: 6, techniques: [], isTieDestination: false, isGrace: true },
+              { stringNumber: 6, fret: 0, midi: 64, dynamics: 6, techniques: [], isTieDestination: false, isGrace: false },
+            ],
+          }]],
+        }],
+      }],
+    };
+    // generator 溯源：addGraceBeat 的 grace 音在原始 MIDI 中存在（fret5 key69）
     const raw = rawGenerator(scoreGrace());
-    expect(raw.noteKeys).toContain(69); // 原始 generator 确有 grace 音（fret5 key69）
-    const result = expandFromScore(scoreGrace());
+    expect(raw.noteKeys).toContain(69);
+    const result = expandScore(isr);
     const targetKeys = result.targets.map((t) => t.soundingMidi);
-    expect(targetKeys).toContain(69); // 现状：grace 落入 beats → 被携带为 target（req5 未满足，披露见 docs/validation/t12-boundary.md）
+    expect(targetKeys).not.toContain(69); // grace 音被排除
+    expect(targetKeys).toContain(64); // 主音仍在
+  });
+
+  it("adapter 三连音：MIDI 起音 0/320/640（tuplet 现被 ISR 携带并重建）", () => {
+    const result = expandFromScore(scoreTripletEighth());
+    const starts = result.midiEvents.filter((e) => e.type === "noteOn").map((e) => e.tick);
+    expect(starts).toEqual(["0", "320", "640"]);
+  });
+
+  it("adapter 一二结尾：occurrence 源序列 0/1/0/2（alternateEndings 现被 ISR 携带并重建）", () => {
+    const result = expandFromScore(scoreAlternateEndings());
+    const keys = result.occurrences.map((o) => o.barSourceKey);
+    expect(keys).toEqual([0, 1, 0, 2]);
   });
 });

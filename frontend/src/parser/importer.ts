@@ -73,7 +73,7 @@ function dynamicValueToNumber(value: unknown): number {
  * 依核验源码：getStringTuning=staff.tuning[staff.tuning.length - noteString]，
  * 故 ISR 弦号 = stringCount - note.string + 1（ISR 1 = 最高弦，对齐框架 §5.3）。
  */
-function mapNote(note: unknown, stringCount: number): IsrNote {
+function mapNote(note: unknown, stringCount: number, grace = false): IsrNote {
   const n = note as {
     string?: number;
     fret?: number;
@@ -101,6 +101,7 @@ function mapNote(note: unknown, stringCount: number): IsrNote {
     dynamics: dynamicValueToNumber(n.dynamics),
     techniques,
     isTieDestination: !!n.isTieDestination,
+    isGrace: !!grace,
   };
 }
 
@@ -118,11 +119,24 @@ export function toIsr(score: model.Score): InternalScore {
       const voices: IsrBeat[][] = ((bar as { voices?: Array<{ beats?: unknown[] }> })?.voices ?? []).map(
         (voice) =>
           (voice.beats ?? []).map((beat, beatIndex) => {
-            const b = beat as { duration?: number; notes?: unknown[] };
-            const notes: IsrNote[] = (b.notes ?? []).map((note) => mapNote(note, stringCount));
+            const b = beat as {
+              duration?: number;
+              notes?: unknown[];
+              dots?: number;
+              tupletNumerator?: number;
+              tupletDenominator?: number;
+              graceType?: number;
+            };
+            const isGraceBeat = typeof b.graceType === "number" ? b.graceType !== 0 : false;
+            const notes: IsrNote[] = (b.notes ?? []).map((note) =>
+              mapNote(note, stringCount, isGraceBeat),
+            );
             return {
               index: beatIndex,
               duration: typeof b.duration === "number" ? b.duration : 0,
+              dots: b.dots ?? 0,
+              tupletNumerator: b.tupletNumerator,
+              tupletDenominator: b.tupletDenominator,
               notes,
             } satisfies IsrBeat;
           }),
@@ -145,6 +159,15 @@ export function toIsr(score: model.Score): InternalScore {
     timeSignatureNumerator: mb.timeSignatureNumerator ?? 4,
     timeSignatureDenominator: mb.timeSignatureDenominator ?? 4,
     tempoBpm: index === 0 ? (score.tempo ?? null) : null,
+    isRepeatStart: mb.isRepeatStart ?? false,
+    repeatCount: mb.repeatCount ?? 0,
+    alternateEndings: mb.alternateEndings ?? 0,
+    tempoAutomations: ((mb.tempoAutomations ?? []) as Array<{ value?: number; ratioPosition?: number }>).map(
+      (a) => ({
+        tick: Math.round(960 * 4 * (mb.timeSignatureNumerator ?? 4) / (mb.timeSignatureDenominator ?? 4) * (a.ratioPosition ?? 0)),
+        bpm: a.value ?? 0,
+      }),
+    ),
   }));
 
   return {

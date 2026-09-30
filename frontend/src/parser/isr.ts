@@ -22,6 +22,8 @@ export interface IsrNote {
   techniques: string[];
   /** 是否延音线目标（tie destination，不要求重新拨弦）。 */
   isTieDestination: boolean;
+  /** 是否 grace 音符（装饰音；alpha Beat.graceType 非 None 的拍内音符）。 */
+  isGrace?: boolean;
 }
 
 /** 一拍内音符集合。 */
@@ -32,6 +34,10 @@ export interface IsrBeat {
   duration: number;
   /** 附点数（0-2）。 */
   dots?: number;
+  /** 三连音分子（如 3）。 */
+  tupletNumerator?: number;
+  /** 三连音分母（如 2）。 */
+  tupletDenominator?: number;
   /** 本拍音符。 */
   notes: IsrNote[];
 }
@@ -68,6 +74,8 @@ export interface IsrMasterBar {
   tempoBpm: number | null;
   /** Tempo automation ticks+BPM within bar. Empty = none. */
   tempoAutomations?: {tick:number;bpm:number}[]; isRepeatStart?: boolean; repeatCount?: number;
+  /** 一二结尾位掩码（bit i = 第 i 结尾）。 */
+  alternateEndings?: number;
 }
 
 /** 完整 ISR。 */

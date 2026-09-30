@@ -38,20 +38,6 @@ option(JUCE_BUILD_EXTRAS "Build JUCE extras" OFF)
 list(APPEND CMAKE_MODULE_PATH "${JUCE_SOURCE_DIR}/tools/modules")
 add_subdirectory("${JUCE_SOURCE_DIR}" juce)
 
-# TinySoundFont 单文件实现库（MIT 许可）。一个 C 文件定义 TSF_IMPLEMENTATION，
-# 其他 C++ 文件只包含声明。保持为独立目标以隔离其编译器警告。
-add_library(tsf STATIC
-  vendor/tsf.c
-)
-target_include_directories(tsf PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/vendor
-)
-if(MSVC)
-  target_compile_options(tsf PRIVATE /W0)
-else()
-  target_compile_options(tsf PRIVATE -w)
-endif()
-
 # WebView2 SDK 头/库探测：pin 固定版本（可复现），无包时明确失败并给出安装指引。
 # 版本匹配 packages/<pkg>/build/native/include/WebView2.h；glob 只找该版本目录。
 set(WEBVIEW2_PINNED_VERSION "1.0.2739.15")
@@ -83,7 +69,6 @@ target_include_directories(guitar_learner_native PUBLIC
   ${WEBVIEW2_INCLUDE_DIR}
 )
 target_link_libraries(guitar_learner_native PUBLIC
-  tsf
   juce::juce_gui_extra
   juce::juce_audio_devices
   juce::juce_core
@@ -127,7 +112,7 @@ add_custom_command(TARGET GuitarLearner POST_BUILD
 # 原生协议测试
 enable_testing()
 
-# RMS 电平单元测试（Mock 正弦/恒定/静音/削波 + PeakHold 窗口时长）——T8
+# RMS 电平单元测试（Mock 正弦/恒定/静音/削波）——T8
 add_executable(rms_meter_tests
   tests/audio-fixtures/rms_meter_tests.cpp
   native/audio/rms_meter.cpp

@@ -51,7 +51,7 @@ export function expandScore(isr:InternalScore):PlaybackExpansion {
     const mb=isr.masterBars[i]; const mbr=new model.MasterBar();
     mbr.timeSignatureNumerator=mb.timeSignatureNumerator;
     mbr.timeSignatureDenominator=mb.timeSignatureDenominator;
-    const automations=mb.tempoAutomations??[]; for(const a of automations){mbr.tempoAutomations.push(model.Automation.buildTempoAutomation(false,a.tick/3840,a.bpm,2,true));} mbr.isRepeatStart=mb.isRepeatStart??false; mbr.repeatCount=mb.repeatCount??0; const tbp=mb.tempoBpm??(i===0?bt:null);
+    const automations=mb.tempoAutomations??[]; for(const a of automations){mbr.tempoAutomations.push(model.Automation.buildTempoAutomation(false,a.tick/3840,a.bpm,2,true));} mbr.isRepeatStart=mb.isRepeatStart??false; mbr.repeatCount=mb.repeatCount??0; mbr.alternateEndings=mb.alternateEndings??0; const tbp=mb.tempoBpm??(i===0?bt:null);
     if(automations.length===0&&tbp!==null)mbr.tempoAutomations.push(model.Automation.buildTempoAutomation(false,0,tbp,2,true));
     scr.addMasterBar(mbr);
   }
@@ -64,7 +64,7 @@ export function expandScore(isr:InternalScore):PlaybackExpansion {
       for(const vb of ms.voices){
         const vc=new model.Voice();
         for(const ib of vb){
-          const bt2=new model.Beat(); bt2.duration=durAD(ib.duration); bt2.dots=ib.dots??0;
+          const bt2=new model.Beat(); bt2.duration=durAD(ib.duration); bt2.dots=ib.dots??0; bt2.tupletNumerator=ib.tupletNumerator??0; bt2.tupletDenominator=ib.tupletDenominator??0;
           for(const iN of ib.notes){
             const nt=new model.Note();
             nt.string=it.stringCount-iN.stringNumber+1;
@@ -110,14 +110,14 @@ export function expandScore(isr:InternalScore):PlaybackExpansion {
   const it0=isr.tracks[0];
   if(!it0)return{midiEvents:evts,occurrences:occs,targets:[],unresolvedCount:0};
 
-  const ibm=new Map<string,{idx:number;dur:number;notes:{sn:number;fr:number;midi:number;tie:boolean;tech:string[]}[]}>();
+  const ibm=new Map<string,{idx:number;dur:number;notes:{sn:number;fr:number;midi:number;tie:boolean;tech:string[];grace:boolean}[]}>();
   for(const m of it0.measures){
     for(let vi=0;vi<m.voices.length;vi++){
       for(let bi=0;bi<m.voices[vi].length;bi++){
         ibm.set(m.index+"/"+vi+"/"+bi,{
           idx:m.voices[vi][bi].index,
           dur:m.voices[vi][bi].duration,
-          notes:m.voices[vi][bi].notes.map(n=>({sn:n.stringNumber,fr:n.fret,midi:n.midi,tie:n.isTieDestination,tech:n.techniques})),
+          notes:m.voices[vi][bi].notes.map(n=>({sn:n.stringNumber,fr:n.fret,midi:n.midi,tie:n.isTieDestination,tech:n.techniques,grace:n.isGrace??false})),
         });
       }
     }
@@ -176,6 +176,7 @@ export function expandScore(isr:InternalScore):PlaybackExpansion {
     const mnIdx=ie.notes.findIndex((n:any)=>n.fr===an0.fret&&n.midi===an0.realValue);
     const mn=mnIdx>=0?ie.notes[mnIdx]:ie.notes[0];
     if(!mn){ucnt++;continue;}
+    if(mn.grace){continue;} // grace 音符从 TrainingTarget 排除（requirement: exclude or identityUnresolved）
 
     tgs.push({
       id:"t"+r.track+"-o"+oidx+"-k"+r.key,
