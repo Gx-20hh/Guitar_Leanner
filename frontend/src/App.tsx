@@ -8,6 +8,10 @@ import { PracticeBoard } from "./PracticeBoard";
 import { usePracticeStore } from "./store/scoreStore";
 import { TrainingPanel, type TrainingStats } from "./TrainingPanel";
 import { MetronomeDialog } from "./MetronomeDialog";
+import { TuningPanel } from "./TuningPanel";
+
+/** 调音 mock（EADGBE 六弦，MIDI 值；原生调音接入后替换为实测频率与目标频率）。 */
+const MOCK_TUNING = [64, 59, 55, 50, 45, 40];
 
 /** 练习 mock 成绩（原生评分接入后替换）。 */
 const mockStats: TrainingStats = { hits: 0, misses: 0, extras: 0, early: 0, late: 0, total: 0 };
@@ -263,6 +267,12 @@ export function App() {
       <div className="spacer" />
 
       <ScoreBoard />
+
+      <div className="spacer" />
+
+      <div className="spacer" />
+
+      <TuningPanel frequencies={MOCK_TUNING} targets={MOCK_TUNING} />
 
       <div className="spacer" />
 
