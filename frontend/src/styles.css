@@ -146,6 +146,70 @@ body {
   margin: 4px 0 0;
 }
 
+/* 谱面工作台 */
+.spacer {
+  height: 28px;
+}
+
+.board {
+  margin: 0 0 8px;
+}
+
+.board h2 {
+  font-size: 1.15rem;
+  margin: 0 0 12px;
+}
+
+.boardMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+
+.boardMeta select {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+
+.drop {
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  padding: 18px 16px;
+  color: var(--muted);
+}
+
+.drop label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.err {
+  color: #c97b4f;
+}
+
+.tabWrap {
+  overflow-x: auto;
+}
+
+.tab {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+  white-space: pre;
+}
+
 /* 只读台账 */
 .readouts {
   margin: 24px 0;

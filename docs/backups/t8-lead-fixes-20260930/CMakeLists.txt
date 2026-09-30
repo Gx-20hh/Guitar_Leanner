@@ -14,10 +14,7 @@ endif()
 
 # 启用 JUCE WebView2 后端（Windows）。JUCE 模块头默认 JUCE_USE_WIN_WEBVIEW2=0，
 # 需在 add_subdirectory 前全局定义以让其生效（同时作用于 juce_gui_extra 模块与我们的目标）。
-# WebView2 SDK 包位置：源相对（${sourceDir}/packages），不硬编码本机路径，可复现。
-if(NOT JUCE_WEBVIEW2_PACKAGE_LOCATION)
-  set(JUCE_WEBVIEW2_PACKAGE_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/packages" CACHE PATH "WebView2 NuGet package home" FORCE)
-endif()
+set(JUCE_WEBVIEW2_PACKAGE_LOCATION D:/GuitarLearner/packages CACHE PATH "" FORCE)
 add_compile_definitions(JUCE_USE_WIN_WEBVIEW2=1)
 
 # JUCE 9.0.3 锁定版本。源码来源：官方仓库 tag 9.0.3。
@@ -38,24 +35,6 @@ option(JUCE_BUILD_EXTRAS "Build JUCE extras" OFF)
 list(APPEND CMAKE_MODULE_PATH "${JUCE_SOURCE_DIR}/tools/modules")
 add_subdirectory("${JUCE_SOURCE_DIR}" juce)
 
-# WebView2 SDK 头/库探测：pin 固定版本（可复现），无包时明确失败并给出安装指引。
-# 版本匹配 packages/<pkg>/build/native/include/WebView2.h；glob 只找该版本目录。
-set(WEBVIEW2_PINNED_VERSION "1.0.2739.15")
-set(_webview2_pinned_pkg "${JUCE_WEBVIEW2_PACKAGE_LOCATION}/Microsoft.Web.WebView2.${WEBVIEW2_PINNED_VERSION}")
-set(WEBVIEW2_INCLUDE_DIR "${_webview2_pinned_pkg}/build/native/include")
-set(WEBVIEW2_LIBRARY "${_webview2_pinned_pkg}/build/native/x64/WebView2LoaderStatic.lib")
-if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-  set(WEBVIEW2_LIBRARY "${_webview2_pinned_pkg}/build/native/x86/WebView2LoaderStatic.lib")
-endif()
-if(NOT EXISTS "${WEBVIEW2_INCLUDE_DIR}/WebView2.h" OR NOT EXISTS "${WEBVIEW2_LIBRARY}")
-  message(FATAL_ERROR
-    "WebView2 SDK ${WEBVIEW2_PINNED_VERSION} not found at ${JUCE_WEBVIEW2_PACKAGE_LOCATION}.\n"
-    "Install it (PowerShell, NuGet provider):\n"
-    "  Install-Package Microsoft.Web.WebView2 -Scope CurrentUser -RequiredVersion ${WEBVIEW2_PINNED_VERSION}\n"
-    "then copy the package dir into ${JUCE_WEBVIEW2_PACKAGE_LOCATION} or set -DJUCE_WEBVIEW2_PACKAGE_LOCATION=<pkg home>.")
-endif()
-message(STATUS "WebView2 pinned ${WEBVIEW2_PINNED_VERSION}: ${WEBVIEW2_INCLUDE_DIR}")
-
 # 库：guitar_learner_native —— 桥接校验器（纯测试逻辑，可独立于 GUI 编译）
 add_library(guitar_learner_native STATIC
   native/bridge/guitar_bridge_protocol.cpp
@@ -66,13 +45,13 @@ target_include_directories(guitar_learner_native PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/native
   ${CMAKE_CURRENT_SOURCE_DIR}/native/bridge
   ${CMAKE_CURRENT_SOURCE_DIR}/contracts
-  ${WEBVIEW2_INCLUDE_DIR}
+  ${JUCE_WEBVIEW2_PACKAGE_LOCATION}/Microsoft.Web.WebView2.1.0.2739.15/build/native/include
 )
 target_link_libraries(guitar_learner_native PUBLIC
   juce::juce_gui_extra
   juce::juce_audio_devices
   juce::juce_core
-  ${WEBVIEW2_LIBRARY}
+  ${JUCE_WEBVIEW2_PACKAGE_LOCATION}/Microsoft.Web.WebView2.1.0.2739.15/build/native/x64/WebView2LoaderStatic.lib
 )
 if(MSVC)
   target_compile_options(guitar_learner_native PRIVATE /W4 /permissive-)
@@ -111,44 +90,16 @@ add_custom_command(TARGET GuitarLearner POST_BUILD
 
 # 原生协议测试
 enable_testing()
-
-# RMS 电平单元测试（Mock 正弦/恒定/静音/削波 + PeakHold 窗口时长）——T8
+# RMS 电平单元测试（Mock 正弦/恒定/静音/削波）——T8
 add_executable(rms_meter_tests
   tests/audio-fixtures/rms_meter_tests.cpp
   native/audio/rms_meter.cpp
 )
-target_include_directories(rms_meter_tests PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/native
-  ${CMAKE_CURRENT_SOURCE_DIR}/native/audio
-)
 target_link_libraries(rms_meter_tests PRIVATE
   juce::juce_core
 )
-if(MSVC)
-  target_compile_options(rms_meter_tests PRIVATE /W4 /permissive-)
-endif()
-add_test(NAME rms_meter_tests COMMAND rms_meter_tests)
 
-# T8 设备层单元测试（纯逻辑 mock，不依赖硬件）：枚举格式/null 通道失效/stopped 失效/epoch
-add_executable(device_input_tests
-  tests/audio-fixtures/device_input_tests.cpp
-  native/audio/device_input.cpp
-  native/audio/rms_meter.cpp
-)
-target_include_directories(device_input_tests PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/native
-  ${CMAKE_CURRENT_SOURCE_DIR}/native/audio
-)
-target_link_libraries(device_input_tests PRIVATE
-  juce::juce_audio_devices
-  juce::juce_core
-)
-if(MSVC)
-  target_compile_options(device_input_tests PRIVATE /W4 /permissive-)
-endif()
-add_test(NAME device_input_tests COMMAND device_input_tests)
-
-# T8 设备层冒烟（受限）：枚举输入设备 + 尝试打开首个 WASAPI 输入（若有）；\n# 无 GE200 硬件门不判通过；打开失败为受限记录非成功；防挂起轮询有上界。
+# T8 设备层冒烟：枚举输入设备 + 尝试打开默认输入（受限场景，硬设备门以 t8-device.md 为准）
 add_executable(device_input_smoke_tests
   tests/audio-fixtures/device_input_smoke_tests.cpp
   native/audio/device_input.cpp
@@ -157,6 +108,7 @@ add_executable(device_input_smoke_tests
 target_include_directories(device_input_smoke_tests PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/native
   ${CMAKE_CURRENT_SOURCE_DIR}/native/audio
+  ${JUCE_WEBVIEW2_PACKAGE_LOCATION}/Microsoft.Web.WebView2.1.0.2739.15/build/native/include
 )
 target_link_libraries(device_input_smoke_tests PRIVATE
   juce::juce_audio_devices
@@ -166,6 +118,18 @@ if(MSVC)
   target_compile_options(device_input_smoke_tests PRIVATE /W4 /permissive-)
 endif()
 add_test(NAME device_input_smoke_tests COMMAND device_input_smoke_tests)
+target_include_directories(rms_meter_tests PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/native
+  ${CMAKE_CURRENT_SOURCE_DIR}/native/audio
+  ${JUCE_SOURCE_DIR}/modules
+)
+target_link_libraries(rms_meter_tests PRIVATE
+  juce::juce_core
+)
+if(MSVC)
+  target_compile_options(rms_meter_tests PRIVATE /W4 /permissive-)
+endif()
+add_test(NAME rms_meter_tests COMMAND rms_meter_tests)
 
 add_executable(guitar_bridge_protocol_tests
   tests/integration/guitar_bridge_protocol_tests.cpp
@@ -184,24 +148,3 @@ if(MSVC)
   target_compile_options(guitar_bridge_protocol_tests PRIVATE /W4 /permissive-)
 endif()
 add_test(NAME guitar_bridge_protocol_tests COMMAND guitar_bridge_protocol_tests)
-
-# T7-host 严格资源路径解析单测（纯逻辑；不启动 WebView/音频）
-add_executable(host_resource_path_tests
-  tests/integration/host_resource_path_tests.cpp
-  native/app/webview_host.cpp
-  native/bridge/guitar_bridge_protocol.cpp
-)
-target_include_directories(host_resource_path_tests PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/native
-  ${CMAKE_CURRENT_SOURCE_DIR}/native/app
-  ${CMAKE_CURRENT_SOURCE_DIR}/native/bridge
-)
-target_link_libraries(host_resource_path_tests PRIVATE
-  guitar_learner_native
-  juce::juce_gui_extra
-)
-if(MSVC)
-  target_compile_options(host_resource_path_tests PRIVATE /W4 /permissive-)
-endif()
-add_test(NAME host_resource_path_tests COMMAND host_resource_path_tests)
-set_tests_properties(host_resource_path_tests PROPERTIES TIMEOUT 15)

@@ -20,10 +20,10 @@
       "name": "ninja-x64",
       "displayName": "Ninja (x64 MSVC)",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build-ninja",
+      "binaryDir": "/build-ninja",
       "cacheVariables": {
         "CMAKE_CXX_STANDARD": "20",
-        "JUCE_WEBVIEW2_PACKAGE_LOCATION": "${sourceDir}/packages"
+        "JUCE_WEBVIEW2_PACKAGE_LOCATION": "/packages"
       }
     }
   ],

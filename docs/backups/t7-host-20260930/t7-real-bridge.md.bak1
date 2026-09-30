@@ -1,0 +1,30 @@
+# T7 Host — Real Bridge / Packaged Page Verification Record
+
+Date: 2026-09-30. Owner: Claude (native host). Reviewer: Codex.
+Status: **host binary builds; real GUI WebView2 bridge NOT yet verified.** No GE200/hardware claim. This file records actual evidence only, not intentions.
+
+## What is verified (real, this session / lead build)
+
+- `Configure (vs2022-x64 preset): cmake --preset vs2022-x64 -S D:/临时工作/GU` → CFG:0.
+- **Host build: `cmake --build D:/临时工作/GU/build --config Debug --target GuitarLearner` succeeded** after fixing `resized()` (C2662: `const auto area` → `auto area`; status strip reserved from bottom 24 first, browser gets remaining area). Produced `build/Debug/GuitarLearner.exe`.
+- Host source changes for this task:
+  - `native/app/webview_host.{h,cpp}` — `BridgedBrowser` subclass (`juce::WebBrowserComponent`) owns `pageAboutToLoad` / `newWindowAttemptingToLoad` hooks; strict resource-root origin boundary (`https://juce.backend/` root, trailing slash prevents sibling-origin prefix); `goToURL(getResourceProviderRoot())` instead of relative `ui/index.html`; resource provider serves only packaged `ui/` via `resolveResourcePath` (rejects `//` network-path, `..`, absolute/backslash/colon, `?`/`#`, missing, empty segments, non-`/` requests).
+  - Backups: `docs/backups/t7-host-20260930/webview_host.{h,cpp}` (+ `.bak2`, `.bak3`).
+
+## What is NOT yet verified (actual gap)
+
+- **`tests/integration/host_resource_path_tests.cpp` does not build**: fails on `juce::String::fromUUID` (C2039/C3861) at line 28 — invalid JUCE API; fix pending from Codex (lead owns this test file now; use `juce::Uuid().toString()`, confirmed available in `JUCE/modules/juce_core/misc/juce_Uuid.h:85`).
+- **No real packaged page load has been observed**: no GUI screenshot/log of `GuitarLearner.exe` rendering `index.html` from the packaged `ui/` without a dev server. Lead is building; observation step remains.
+- **No real `guitarBridge` request/reply through WebView2**: no evidence of ping / unsupported-version / unknown-command / malformed-request round-trip crossing the actual WebView2/native bridge. CTest protocol tests are offline-only and do not satisfy this acceptance.
+- No audio input device was opened in this task (per scope). **No GE200 hardware evidence** — hardware gate remains NOT passed.
+
+## Prior offline test evidence (T8 regression, this session)
+
+- `ctest --test-dir build -C Debug --output-on-failure --timeout 15 -R "^(rms_meter_tests|device_input_tests|guitar_bridge_protocol_tests)$"` → CTEST:0 (3/3 passed; rms 14/14, device_input 16/16, protocol 22/22).
+- `device_input_smoke_tests.exe` → EXIT:0 (constrained: 3 DirectSound inputs enumerated, no GE200; open + clock advance observed on default DirectSound input only).
+
+## Explicit limitations / stop boundary
+
+- Preserve generated test temp files; no recursive/batch cleanup (project rule).
+- No frontend/ or contracts/ writes in this task (Pi owns frontend and score-format reconciliation).
+- No commit/push; no task-board mutation. This task stops at documenting the above for Codex review.

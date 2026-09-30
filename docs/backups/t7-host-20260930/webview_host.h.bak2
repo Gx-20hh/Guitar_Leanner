@@ -5,7 +5,7 @@
 // withNativeFunction("guitarBridge", ...) / withResourceProvider。
 // 用 getResourceProviderRoot() 加载打包页面，严格限制资源根与导航，不暴露 shell/任意文件。
 //
-// 线程约定：WebViewHost 主线程构造；加载/回调只在 UI 线程。
+// 线程约定：WebViewHost 主线程构造；回调/加载只在 UI 线程。
 
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -34,10 +34,8 @@ public:
     juce::String runtimeStatus() const;
     void resized() override;
 
-    // 资源路径解析（严格）：
-    //  - 请求必须是单纯本地资源路径；"/" 或空 -> index.html；"/assets/x.js" -> ui/assets/x.js。
-    //  - 拒绝：network-path `//…`（双斜杠起）、盘符绝对 "C:…"、反斜杠、空/"."/".." 段、
-    //    query/fragment、以及任何会逃到 root 之外（含 sibling-prefix）的拼接。
+    // 资源路径解析（严格）：root 必须绝对路径；requestPath 前导 "/" 剥掉；
+    // "/" 或空映射 index.html；拒绝绝对盘符路径、含 ".." 段、sibling-prefix 逃逸、空段注入。
     static ResourceResolution resolveResourcePath (const juce::File& root, const juce::String& requestPath);
 
 private:
@@ -48,26 +46,13 @@ private:
     void handleNativeFunction (const juce::Array<juce::var>& args,
                                juce::WebBrowserComponent::NativeFunctionCompletion completion);
 
-    // 严格本地内容装载策略：只允许资源根 origin 的页面加载；外部 URL/新窗口一律拒绝。
-    class BridgedBrowser final : public juce::WebBrowserComponent
-    {
-    public:
-        BridgedBrowser (const Options& options, WebViewHost& owner)
-            : juce::WebBrowserComponent (options), owner_ (owner)
-        {
-        }
+    // 页面加载钩子：只允许资源根 URL，拒绝外部导航/新窗口。
+    bool pageAboutToLoad (const juce::String& url) override;
+    void newWindowAttemptingToLoad (const juce::String& url) override;
 
-        bool pageAboutToLoad (const juce::String& url) override;
-        void newWindowAttemptingToLoad (const juce::String& url) override;
-
-    private:
-        WebViewHost& owner_;
-    };
-    friend class BridgedBrowser;
-
-    std::unique_ptr<BridgedBrowser> browser_;
+    std::unique_ptr<juce::WebBrowserComponent> browser_;
     juce::Label statusLabel_;
-    juce::String resourceRootUrl_; // getResourceProviderRoot() 的值（Windows: https://juce.backend/）
+    juce::String resourceRootUrl_; // getResourceProviderRoot() 的值，用于校验加载来源
 };
 
 } // namespace guitar_learner

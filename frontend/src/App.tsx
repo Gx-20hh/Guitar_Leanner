@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getConnectorDiagnostic, type ConnectorDiagnostic } from "@bridge/diagnostic";
 import { runPing, type PingClientResult } from "@bridge/client";
+import { ScoreBoard } from "./score/ScoreBoard";
 
 const SCRIPTS: Array<{ name: string; purpose: string }> = [
   { name: "npm run dev", purpose: "启动本地 Vite 开发服务器" },
@@ -142,6 +143,10 @@ export function App() {
           </div>
         ))}
       </dl>
+
+      <div className="spacer" />
+
+      <ScoreBoard />
 
       <section className="scripts">
         <h2>本地脚本</h2>

@@ -25,24 +25,13 @@ juce::String mimeForExtension (const juce::String& ext)
     return "application/octet-stream";
 }
 
-// 把 provider 收到的资源请求（恒以 "/" 起始）解析为 root 内相对路径。
-// 拒绝：""（非 / 起）、"//…" network-path、反斜杠、冒号、?/#（query/fragment）、
-//     任何非纯相对段。合法："/" -> ""（index.html）、"/assets/x.js" -> "assets/x.js"。
-juce::String parseRelPath (const juce::String& requestPath, bool& ok)
+// 把原始请求串规范化：剥掉前导 "/"，统一分隔符；空 -> ""（index.html）。
+juce::String stripLeadingSlash (const juce::String& raw)
 {
-    ok = false;
-
-    if (! requestPath.startsWithChar ('/'))
-        return {};
-
-    const juce::String rel = requestPath.substring (1); // 去掉一个前导 "/"
-
-    // network-path 形式（第二个字符仍是 "/"）与反斜杠/冒号/query/fragment：拒绝
-    if (rel.startsWithChar ('/') || rel.contains ("\\") || rel.contains (":") || rel.contains ("?") || rel.contains ("#"))
-        return {};
-
-    ok = true;
-    return rel;
+    auto s = raw;
+    while (s.startsWith ("/"))
+        s = s.substring (1);
+    return s;
 }
 
 } // namespace
@@ -51,68 +40,76 @@ ResourceResolution WebViewHost::resolveResourcePath (const juce::File& root, con
 {
     ResourceResolution result;
 
-    if (! root.isDirectory())
+    // 资源根必须存在且为目录（绝对，不依赖 cwd）。
+    if (root.isDirectory())
     {
-        result.error = "resource root directory missing";
-        return result;
-    }
+        const auto rootAbs = root.getFullPathName();
+        const auto rootNorm = juce::File::createFileWithoutCheckingPath (rootAbs).getFullPathName();
 
-    bool parsedOk = false;
-    juce::String rel = parseRelPath (requestPath, parsedOk);
-    if (! parsedOk)
-    {
-        result.error = "rejected: malformed resource request";
-        return result;
-    }
+        // 请求 "/" 或空 -> index.html（资源根入口，JUCE 语义）。
+        const juce::String rel = stripLeadingSlash (requestPath).isEmpty() ? "index.html" : stripLeadingSlash (requestPath);
 
-    if (rel.isEmpty())
-        rel = "index.html";
-
-    // 逐段校验：空段、"."、"/"、段内反斜杠或冒号 → 拒绝
-    juce::StringArray segments;
-    segments.addTokens (rel, "/", juce::StringRef());
-    for (const auto& seg : segments)
-    {
-        if (seg.isEmpty() || seg == "." || seg == ".." || seg.contains ("\\") || seg.contains (":"))
+        // 拒绝再带 "/" 前缀的绝对形态与盘符绝对路径：""、"/x" 已在上面处理；
+        // 这里 rel 不含前导 "/"，但若含 ":"（盘符）或反斜杠则拒。
+        if (rel.contains (":") || rel.contains ("\\"))
         {
-            result.error = "rejected: invalid path segment";
+            result.ok = false;
+            result.error = "rejected: malformed path";
             return result;
         }
-    }
 
-    // 拼接候选，并做规范化 containment 检查（防 sibling-prefix 逃逸如 rootA/../… 已在段层拒，
-    // 这里再兜底一次确保绝对落在 root 内）。
-    const auto rootNorm = juce::File::createFileWithoutCheckingPath (root.getFullPathName()).getFullPathName();
-    const auto candidate = root.getChildFile (rel);
-    const auto candNorm = juce::File::createFileWithoutCheckingPath (candidate.getFullPathName()).getFullPathName();
+        // 逐段校验：拒绝 ""、"."、".." 段；拒绝解码后含危险字符。
+        juce::StringArray segments;
+        segments.addTokens (rel, "/", juce::StringRef());
+        for (auto& seg : segments)
+        {
+            if (seg.isEmpty() || seg == "." || seg == "..")
+            {
+                result.ok = false;
+                result.error = "rejected: invalid path segment";
+                return result;
+            }
+        }
 
-    if (! candNorm.startsWith (rootNorm + juce::File::getSeparatorString()))
-    {
-        result.error = "rejected: path escapes resource root";
+        // 拼接候选文件；规范化后必须仍位于 root 内（含 sibling-prefix 逃逸拦截）。
+        const auto candidate = root.getChildFile (rel);
+        const auto candNorm = juce::File::createFileWithoutCheckingPath (candidate.getFullPathName()).getFullPathName();
+
+        if (! candNorm.startsWith (rootNorm + juce::File::getSeparatorChar())
+            && candNorm != rootNorm) // 精确等于 root 不允许（root 是目录）
+        {
+            result.ok = false;
+            result.error = "rejected: path escapes resource root";
+            return result;
+        }
+
+        if (! candidate.existsAsFile())
+        {
+            result.ok = false;
+            result.error = "missing resource: not under root or not a file";
+            return result;
+        }
+
+        result.ok = true;
+        result.file = candidate;
         return result;
     }
 
-    if (! candidate.existsAsFile())
-    {
-        result.error = "missing resource: " + rel;
-        return result;
-    }
-
-    result.ok = true;
-    result.file = candidate;
+    result.ok = false;
+    result.error = "resource root directory missing";
     return result;
 }
 
 WebViewHost::WebViewHost()
     : resourceRootUrl_ (juce::WebBrowserComponent::getResourceProviderRoot())
 {
-    const juce::File ui = uiDir();
+    juce::File ui = uiDir();
 
-    // 严格本地资源提供：只 serve ui/ 内文件；非法请求返回无（WebView 得到 404/失败）。
-    auto resourceProvider = [ui] (const juce::String& url)
+    // 前端资源根：exe 旁的 ui/ 目录。
+    auto resourceProvider = [this, ui] (const juce::String& url)
         -> std::optional<juce::WebBrowserComponent::Resource>
     {
-        auto res = WebViewHost::resolveResourcePath (ui, url);
+        auto res = resolveResourcePath (ui, url);
         if (! res.ok)
             return std::nullopt;
 
@@ -142,12 +139,14 @@ WebViewHost::WebViewHost()
                              })
         .withResourceProvider (resourceProvider);
 
+    // areOptionsSupported 是 WebBrowserComponent 的静态方法（不是 Options 的），
+    // 在完整 Options 上探测后端/原生集成/资源提供是否可用。
     const bool supported = juce::WebBrowserComponent::areOptionsSupported (options);
 
     if (supported)
     {
-        browser_ = std::make_unique<BridgedBrowser> (options, *this);
-        // 加载资源根：provider 收到 "/" 返回 index.html。无外部 URL、无开发服务器。
+        browser_ = std::make_unique<juce::WebBrowserComponent> (options);
+        // 加载资源根：provider 收到 "/"，返回 index.html。无外部 URL、无开发服务器。
         browser_->goToURL (resourceRootUrl_);
         addAndMakeVisible (browser_.get());
     }
@@ -177,10 +176,10 @@ juce::String WebViewHost::runtimeStatus() const
 
 void WebViewHost::resized()
 {
-    auto area = getLocalBounds();
-    statusLabel_.setBounds (area.removeFromBottom (24));
+    const auto area = getLocalBounds();
     if (browser_ != nullptr)
         browser_->setBounds (area);
+    statusLabel_.setBounds (area.removeFromBottom (24));
 }
 
 void WebViewHost::handleNativeFunction (const juce::Array<juce::var>& args,
@@ -201,24 +200,24 @@ void WebViewHost::handleNativeFunction (const juce::Array<juce::var>& args,
         return;
     }
 
+    // request 是 JS 对象；交给协议校验器（校验器接收 JSON 文本，得到一致判定逻辑）。
     const auto requestJson = juce::JSON::toString (args[0], true);
     const auto replyObj = guitar_bridge::makePingReplyVar (requestJson);
 
+    // completion 接收 var；直接把 Reply 对象（JS 对象）传入，前端获得 Promise<Reply>。
     completion (replyObj);
 }
 
-bool WebViewHost::BridgedBrowser::pageAboutToLoad (const juce::String& url)
+bool WebViewHost::pageAboutToLoad (const juce::String& url)
 {
-    // 严格本地内容边界：只允许 resourceRootUrl_（尾 "/"）本身或其子路径。
-    // root 尾 "/" 天然排除 sibling-origin 前缀（如 https://juce.backend.evil）。
-    // 任何外部 URL/协议/相对逃逸在此拒绝 —— bridge 只在可信页面可见。
-    return url == owner_.resourceRootUrl_
-        || url.startsWith (owner_.resourceRootUrl_);
+    // 只允许加载资源根（及其子路径）；任何外部 URL、相对逃逸、协议切换一律拒绝。
+    // 在暴露 native bridge 之前拦截不可信导航。
+    return url.startsWith (resourceRootUrl_);
 }
 
-void WebViewHost::BridgedBrowser::newWindowAttemptingToLoad (const juce::String& url)
+void WebViewHost::newWindowAttemptingToLoad (const juce::String& url)
 {
-    // JUCE 语义：仅通知，不创建窗口。拒绝并忽略（不做弹出、不交系统浏览器）。
+    // JUCE 语义：仅通知，不实际加载新窗口。拒绝并忽略（不做弹出/不交系统浏览器）。
     juce::ignoreUnused (url);
 }
 

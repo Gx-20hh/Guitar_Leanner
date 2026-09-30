@@ -3,7 +3,7 @@
     "id": "5ff45a17-80de-4a40-9d12-849ed1abf15c",
     "number": 7,
     "project": null,
-    "status": "started",
+    "status": "done",
     "title": "M0 验证工具链、双端骨架与真实桥接",
     "notes": "Owner: Claude：工具链/CMake/JUCE/WebView2；Pi：React/Vite/桥接客户端；Codex：契约及联调审查\nDepends: 无；首项。前置子项须有负责人认可的验收证据。\nFiles: CMakeLists.txt、CMakePresets.json、native/app/、native/bridge/、frontend/、contracts/、.github/workflows/、licenses/\nGate: 先核对MSVC/SDK/CMake/PATH和WebView2，再锁依赖；先共同冻结envelope，再双端分目录并行。真实WebView2本地页面一次request/reply；版本/未知命令/错误关联验证；CMake、前端typecheck/test/build实际输出和Windows CI。记录许可/SoundFont来源。alphaTab留T11，不把mock当真实桥接。\nReference: docs/project-arrangement-review.md；修改已有文件先备份。一次只派一个有界子任务，不commit/push，不自动继续后续任务。",
     "steps": [
@@ -21,7 +21,7 @@
       },
       {
         "id": "f8ae4131-5fb8-4fbe-953b-b7efe6efbe28",
-        "done": false,
+        "done": true,
         "short_id": "f",
         "text": "验证桥接 ping-pong 通路"
       }
@@ -62,67 +62,20 @@
     "id": "f49f82b5-2891-477f-a344-604b899bcba3",
     "number": 11,
     "project": null,
-    "status": "complete",
+    "status": "started",
     "title": "M0 验证 GP5/GP 导入、六线谱与音轨",
     "notes": "Owner: Pi；Claude复核DTO消费\nDepends: T7。前置子项须有负责人认可的验收证据。\nFiles: frontend/src/score-adapter/、frontend/谱面、tests/score-fixtures/\nGate: 自制/获授权GP5和GP各一个；锁alphaTab和npm依赖；渲染六线谱，核对轨道/调弦/变调夹/弦序。保留来源哈希和版本；public API不足记录限制。T7前端/契约子项验收后可先做离线原型，不必等设备。\nReference: docs/project-arrangement-review.md；修改已有文件先备份。一次只派一个有界子任务，不commit/push，不自动继续后续任务。",
-    "steps": [
-      {
-        "id": "r1",
-        "done": true,
-        "text": "GP5/GP parse + ISR + capo"
-      },
-      {
-        "id": "r2",
-        "done": true,
-        "text": "multi-voice block fix + zero-string guard"
-      },
-      {
-        "id": "r3",
-        "done": true,
-        "text": "test isolation fix + import control 4 tests added"
-      },
-      {
-        "id": "r4",
-        "done": true,
-        "text": "score display + contract rewrite"
-      }
-    ],
+    "steps": [],
     "thread": null
   },
   {
     "id": "854e100c-7af4-471b-9007-992c4992e847",
     "number": 12,
     "project": null,
-    "status": "started",
+    "status": "open",
     "title": "M0 验证播放展开、MIDI 与目标身份映射",
     "notes": "Owner: Pi唯一实现ScorePlaybackAdapter；Claude时间语义复核；Codex验收\nDepends: T11。前置子项须有负责人认可的验收证据。\nFiles: frontend/src/score-adapter/、tests/score-fixtures/、contracts/（本任务Pi唯一写入）\nGate: 同一次展开产出MIDI/TrainingTarget/谱面映射；sourceNoteId/sourceBeatId/occurrenceId稳定。核对反复/一二结尾/延音/tempo map/PPQ/三连音/多声部；复杂跳转不可靠时明确禁用评分。DTO不含alphaTab对象。\nReference: docs/project-arrangement-review.md；修改已有文件先备份。一次只派一个有界子任务，不commit/push，不自动继续后续任务。",
-    "steps": [
-      {
-        "id": "p0",
-        "done": true,
-        "text": "proof spike: repeat/tempo/timeAt -- all expectations pass"
-      },
-      {
-        "id": "p1",
-        "done": false,
-        "text": "implement ScorePlaybackAdapter: single-pass expand -> MIDI events + TrainingTarget + score mapping"
-      },
-      {
-        "id": "p2",
-        "done": false,
-        "text": "identity resolution: precise mapping or explicit rejection (unison/multi-voice/grace)"
-      },
-      {
-        "id": "p3",
-        "done": false,
-        "text": "repeat/alt-endings/tempo map + golden table from proof spike"
-      },
-      {
-        "id": "p4",
-        "done": false,
-        "text": "tests + typecheck + build pass"
-      }
-    ],
+    "steps": [],
     "thread": null
   },
   {

@@ -177,10 +177,10 @@ juce::String WebViewHost::runtimeStatus() const
 
 void WebViewHost::resized()
 {
-    auto area = getLocalBounds();
-    statusLabel_.setBounds (area.removeFromBottom (24));
+    const auto area = getLocalBounds();
     if (browser_ != nullptr)
         browser_->setBounds (area);
+    statusLabel_.setBounds (area.removeFromBottom (24));
 }
 
 void WebViewHost::handleNativeFunction (const juce::Array<juce::var>& args,
