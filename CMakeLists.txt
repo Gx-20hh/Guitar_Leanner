@@ -258,3 +258,19 @@ if(MSVC)
 endif()
 add_test(NAME wav_recorder_tests COMMAND wav_recorder_tests)
 set_tests_properties(wav_recorder_tests PROPERTIES TIMEOUT 15)
+
+# T10 WAV recorder tests
+add_executable(wav_recorder_tests
+  tests/audio-fixtures/wav_recorder_tests.cpp
+)
+target_include_directories(wav_recorder_tests PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(wav_recorder_tests PRIVATE
+  juce::juce_core
+)
+if(MSVC)
+  target_compile_options(wav_recorder_tests PRIVATE /W4 /permissive-)
+endif()
+add_test(NAME wav_recorder_tests COMMAND wav_recorder_tests)
+set_tests_properties(wav_recorder_tests PROPERTIES TIMEOUT 15)
