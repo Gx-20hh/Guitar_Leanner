@@ -2,6 +2,11 @@ import { useState } from "react";
 import { getConnectorDiagnostic, type ConnectorDiagnostic } from "@bridge/diagnostic";
 import { runPing, type PingClientResult } from "@bridge/client";
 import { ScoreBoard } from "./score/ScoreBoard";
+import { importGpToIsr } from "./parser/importer";
+import { expandScore } from "./score/ScorePlaybackAdapter";
+import { PracticeBoard } from "./PracticeBoard";
+import type { InternalScore } from "./parser/isr";
+import type { PlaybackExpansion } from "./score/playbackTypes";
 
 const SCRIPTS: Array<{ name: string; purpose: string }> = [
   { name: "npm run dev", purpose: "启动本地 Vite 开发服务器" },
@@ -22,6 +27,53 @@ const READOUTS: Readout[] = [
   { label: "音频 / 评分", value: "未接入", hint: "归原生端，前端不拥有音频时钟" },
   { label: "参考设备", value: "MOOER GE200（未实机验收）", hint: "未连接、无驱动安装、未测通道" },
 ];
+
+function PracticePanel() {
+  const [state, setState] = useState<{ isr: InternalScore; expansion: PlaybackExpansion } | null>(null);
+  const [practError, setPractError] = useState<string | null>(null);
+  const [pulse, setPulse] = useState(false);
+
+  function onFile(file: File) {
+    setPractError(null);
+    file
+      .arrayBuffer()
+      .then((buffer) => importGpToIsr(new Uint8Array(buffer)))
+      .then((isr) => {
+        setState({ isr, expansion: expandScore(isr) });
+        setPulse(false);
+      })
+      .catch((caught: Error) => setPractError(caught instanceof Error ? caught.message : String(caught)));
+  }
+
+  return (
+    <section className="board" data-testid="practicePanel">
+      <h2>基础练习（指板）</h2>
+      <div className="drop">
+        <label htmlFor="practiceFile">载入练习谱（GP/GP5/GP4/GP3）</label>
+        <input
+          id="practiceFile"
+          type="file"
+          accept=".gp,.gp5,.gp4,.gp3"
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            if (file) onFile(file);
+          }}
+        />
+        {practError ? <p className="err">{practError}</p> : <p>导入谱面 → ISR → 播放展开 → 指板高亮</p>}
+      </div>
+      <div className="pulseRow">
+        <button type="button" onClick={() => setPulse((prev) => !prev)}>
+          节拍脉冲（视觉指示，不发声）
+        </button>
+      </div>
+      {state ? (
+        <PracticeBoard isr={state.isr} expansion={state.expansion} pulse={pulse} />
+      ) : (
+        <div className="tab">（未载入谱面）</div>
+      )}
+    </section>
+  );
+}
 
 function StatusBand({ diag }: { diag: ConnectorDiagnostic }) {
   const stateLabel = diag.state === "connected" ? "已连接（原生桥接可用）" : "未连接";
@@ -147,6 +199,10 @@ export function App() {
       <div className="spacer" />
 
       <ScoreBoard />
+
+      <div className="spacer" />
+
+      <PracticePanel />
 
       <section className="scripts">
         <h2>本地脚本</h2>
