@@ -94,7 +94,18 @@ Seven test sources exist; all seven are referenced by a CMake target.
 2. **Potential duplicate symbols** in `guitar_bridge_protocol_tests` and `host_resource_path_tests` from compiling `native/bridge/guitar_bridge_protocol.cpp` (and `webview_host.cpp`) both directly and through `guitar_learner_native`. Verify whether these sources are in `guitar_learner_native`; if yes, remove them from the test `add_executable`. If they are intentionally separate, leave them but be aware of the risk.
 3. **`transport_tests` include path fragility**: works because `transport.cpp` is included as a relative path from the test source, but if that source file is ever moved or if `transport.cpp` changes include style, it will break. Consider adding `${CMAKE_CURRENT_SOURCE_DIR}/native` to its include dirs for robustness and/or compile `transport.cpp` directly into `guitar_learner_native` rather than relying on `#include` of a `.cpp` file in the test.
 
+## Addendum: vcpkg / SoundFont acquisition note
+
+- `vcpkg.json` is not present in the repository. This project does not currently use vcpkg for dependency acquisition; it uses JUCE via `JUCE_SOURCE_DIR` (default `${CMAKE_CURRENT_SOURCE_DIR}/JUCE`) and TinySoundFont via the vendored `vendor/tsf.c`.
+- JUCE and WebView2 are the CMake-tracked external dependencies. WebView2 is pinned to `1.0.2739.15` and expected under `${CMAKE_CURRENT_SOURCE_DIR}/packages/Microsoft.Web.WebView2.1.0.2739.15`.
+- TinySoundFont **library code** is vendored (MIT) and builds as the `tsf` static library target. TinySoundFont's MIT license covers the synthesizer engine, **not** SoundFont files.
+- **SoundFont (.sf2) files are not acquired via CMake or vcpkg**. A GM SoundFont such as FluidR3_GM.sf2 must be obtained separately under an appropriate license that permits redistribution. There is currently no CMake step, FetchContent, or `ExternalProject_Add` that downloads or verifies a SoundFont.
+- `Transport::loadSoundFont(const char*)` accepts a runtime file path, so the application/frontend (or packaging step) is responsible for distributing a licensed SoundFont and for ensuring the file exists at runtime.
+- `isSoundFontLoaded()` currently returns `true` after any `loadSoundFont` attempt, even if `tsf_load_filename` returns `nullptr`. This stub behavior was preserved for existing tests but is misleading from a T13 integration standpoint; after the SoundFont-acquisition pipeline is in place, `isSoundFontLoaded()` should reflect whether `impl_->soundFont` is non-null.
+- Recommend adding a CMake option or an asset-discovery routine that locates/validates the SoundFont path at build/package time, and updating `isSoundFontLoaded()` to report actual TSF state.
+
 ## Recommended next steps
 - Remove duplicate `wav_recorder_tests` block (lines 262–276).
 - Verify `guitar_learner_native` source list and remove redundant sources from `guitar_bridge_protocol_tests` / `host_resource_path_tests`.
 - Re-run CMake configure and build to confirm target registration.
+- Define SoundFont acquisition/distribution strategy and wire it into build or packaging so `loadSoundFont` can load a real file at runtime.
