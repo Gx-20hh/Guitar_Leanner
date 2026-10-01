@@ -68,7 +68,6 @@ int main() {
   t.play();
   // simulate one audio block: 256 samples @ 48k = 5.33ms
   juce::AudioSourceChannelInfo dummy;
-  dummy.buffer = nullptr;
   dummy.startSample = 0;
   dummy.numSamples = 256;
   dummy.buffer = nullptr; // ensure null-buffer guard fires
