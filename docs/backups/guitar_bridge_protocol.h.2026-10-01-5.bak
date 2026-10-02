@@ -48,7 +48,4 @@ ValidateResult validateAndParse(const juce::String& requestJson, ParsedRequest& 
 // 辅助：从 JSON 顶层提取 String 字段（不在 object? 返回无效）
 juce::String extractStringField(const juce::var& obj, const juce::String& name);
 
-// 辅助：从 JSON object 按名提取 var 字段（不在 object? 返回 undefined）
-juce::var getField(const juce::var& obj, const juce::String& name);
-
 } // namespace guitar_bridge

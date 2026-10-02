@@ -83,6 +83,7 @@ function PracticePanel() {
   const loadFromLibrary = usePracticeStore((s) => s.loadFromLibrary);
   const metronome = usePracticeStore((s) => s.metronome);
   const setMetronome = usePracticeStore((s) => s.setMetronome);
+  const playbackTick = usePracticeStore((s) => s.transportPositionSlice.tick);
   const [showMetronome, setShowMetronome] = useState(false);
 
   function onFile(file: File) {
@@ -135,7 +136,7 @@ function PracticePanel() {
         />
       ) : null}
       {isr && expansion ? (
-        <PracticeBoard isr={isr} expansion={expansion} pulse={pulse} />
+        <PracticeBoard isr={isr} expansion={expansion} pulse={pulse} currentTick={playbackTick} />
       ) : importer.kind === "loading" ? (
         <div className="tab">载入中…</div>
       ) : (

@@ -3,8 +3,6 @@
 #include <vector>
 #include <memory>
 
-namespace guitar_learner { namespace audio {
-
 class WavRecorder {
 public:
   WavRecorder();
@@ -14,12 +12,10 @@ public:
   void stopRecording();
   bool isRecording() const;
 
-  // Called from audio callback -- non-blocking, just copies samples into ring buffer
+  // Called from audio callback ¡ª non-blocking, just copies samples into ring buffer
   void pushSamples(const float* const* inputData, int numChannels, int numSamples);
 
 private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
 };
-
-}} // namespace guitar_learner::audio

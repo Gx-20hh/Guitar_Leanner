@@ -164,7 +164,7 @@ void Transport::loadSoundFont(const char* sf2Path) {
   impl_->sfLoaded = true;
 }
 
-bool Transport::isSoundFontLoaded() const { return impl_->soundFont != nullptr; }
+bool Transport::isSoundFontLoaded() const { return impl_->sfLoaded; }
 
 void Transport::loadScore(const TransportMidiEvent* ev, int n) {
   juce::ScopedLock l(impl_->lock);

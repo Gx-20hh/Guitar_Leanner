@@ -73,3 +73,7 @@ compile_commands.json
 !tests/score-fixtures/*.gp3
 !tests/score-fixtures/*.gp4
 !tests/score-fixtures/*.gp
+*.sf2 
+!resources/*.sf2 
+
+*.sf2

@@ -1,9 +1,7 @@
-#include <cassert>
+﻿#include <cassert>
 #include <cstdio>
 #include <filesystem>
-#include "wav_recorder.h"
-
-using guitar_learner::audio::WavRecorder;
+#include "../native/audio/wav_recorder.cpp"
 
 int main() {
   // Test 1: initial state

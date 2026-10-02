@@ -11,8 +11,6 @@ export interface PracticeBoardProps {
   expansion: PlaybackExpansion;
   /** 节拍脉冲（视觉指示；不产生发声）。 */
   pulse?: boolean;
-  /** 共享播放位置（tick 十进制字符串）；由 TransportBar/原生轮询写入。 */
-  currentTick?: string | null;
   /** 显示的品格数上限（默认 15；超出目标品格时按目标扩展）。 */
   fretCount?: number;
 }
@@ -33,36 +31,16 @@ function maxFretOf(targets: PlaybackExpansion["targets"], fallback: number): num
   return maximum;
 }
 
-/** 当前 tick 落于其 [start, start+duration) 内的可评分目标；无则 null。 */
-export function targetAtTick(
-  expansion: PlaybackExpansion,
-  tick: string | null | undefined,
-): PlaybackExpansion["targets"][number] | null {
-  if (tick == null) return null;
-  const t = Number(tick);
-  if (!Number.isFinite(t)) return null;
-  for (const target of expansion.targets) {
-    if (target.grading !== "singleNote") continue;
-    const start = Number(target.startTick);
-    const end = start + Number(target.durationTicks);
-    if (t >= start && t < end) return target;
-  }
-  return null;
-}
-
 /** 滚动指板：左侧弦号标签，顶部品格标签，网格单元格；目标格高亮；下方节拍脉冲指示。 */
 export function PracticeBoard({
   isr,
   expansion,
   pulse = false,
-  currentTick,
   fretCount = 15,
 }: PracticeBoardProps) {
   const track = isr.tracks[0] ?? null;
   const stringCount = track ? track.stringCount : 6;
   const targetMap = buildTargetMap(expansion, stringCount);
-  const currentTarget = targetAtTick(expansion, currentTick);
-  const playingKey = currentTarget ? `${currentTarget.stringNumber}-${currentTarget.fret}` : null;
   const maxFret = maxFretOf(expansion.targets, Math.max(0, fretCount - 1));
   const frets = Array.from({ length: maxFret + 1 }, (_, i) => i);
   const stringNumbers = Array.from({ length: stringCount }, (_, i) => i + 1);
@@ -97,14 +75,12 @@ export function PracticeBoard({
             <div className="fretCol" data-fret={f} key={f}>
               {stringNumbers.map((n) => {
                 const hit = targetMap.has(`${n}-${f}`);
-                const playing = playingKey === `${n}-${f}`;
                 return (
                   <div
-                    className={playing ? "fretCell target playing" : hit ? "fretCell target" : "fretCell"}
+                    className={hit ? "fretCell target" : "fretCell"}
                     data-string={n}
                     data-fret={f}
                     data-target={hit ? "true" : "false"}
-                    data-playing={playing ? "true" : "false"}
                     key={n}
                   />
                 );

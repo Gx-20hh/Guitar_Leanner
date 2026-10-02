@@ -11,7 +11,6 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <optional>
-#include "transport/transport.h"
 
 namespace guitar_learner {
 
@@ -28,7 +27,7 @@ struct ResourceResolution
 class WebViewHost : public juce::Component
 {
 public:
-    explicit WebViewHost (Transport& transport);
+    WebViewHost();
 
     // 若本机 WebView2 runtime 缺失（areOptionsSupported 返回 false），显示明确错误。
     bool isRuntimeAvailable() const;
@@ -49,23 +48,6 @@ private:
     void handleNativeFunction (const juce::Array<juce::var>& args,
                                juce::WebBrowserComponent::NativeFunctionCompletion completion);
 
-    // Transport command handlers.
-    juce::var handlePlay (const juce::var& request);
-    juce::var handlePause (const juce::var& request);
-    juce::var handleStop (const juce::var& request);
-    juce::var handleSeek (const juce::var& request);
-    juce::var handleSetSpeed (const juce::var& request);
-    juce::var handleSetLoop (const juce::var& request);
-    juce::var handleLoadScore (const juce::var& request);
-    juce::var handleGetTransportPosition (const juce::var& request);
-
-    static juce::var makeError (const juce::String& requestId,
-                                const juce::String& code,
-                                const juce::String& message);
-    static juce::var makeReply (const juce::String& requestId,
-                                const juce::var& payload);
-    static int getIntField (const juce::var& obj, const juce::String& name, int defaultValue);
-
     // 严格本地内容装载策略：只允许资源根 origin 的页面加载；外部 URL/新窗口一律拒绝。
     class BridgedBrowser final : public juce::WebBrowserComponent
     {
@@ -83,7 +65,6 @@ private:
     };
     friend class BridgedBrowser;
 
-    Transport& transport_;
     std::unique_ptr<BridgedBrowser> browser_;
     juce::Label statusLabel_;
     juce::String resourceRootUrl_; // getResourceProviderRoot() 的值（Windows: https://juce.backend/）

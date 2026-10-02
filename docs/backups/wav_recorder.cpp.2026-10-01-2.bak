@@ -4,8 +4,6 @@
 #include <mutex>
 #include <thread>
 
-namespace guitar_learner { namespace audio {
-
 static constexpr size_t kRingSize = 1 << 18; // 256k samples (~5.3s at 48kHz mono)
 
 struct WavRecorder::Impl {
@@ -88,7 +86,7 @@ void WavRecorder::startRecording(const juce::File& file, double sr, int ch) {
 
   impl_->outStream = file.createOutputStream();
   if (impl_->outStream) {
-    // Placeholder header ï¿½ï¿½ updated on stop
+    // Placeholder header ¡ª updated on stop
     impl_->writeWavHeader(*impl_->outStream, 0);
   }
 
@@ -140,5 +138,3 @@ void WavRecorder::pushSamples(const float* const* input, int ch, int numSamples)
   impl_->pendingFrames += numSamples;
   impl_->writerCv.notify_one();
 }
-
-}} // namespace guitar_learner::audio

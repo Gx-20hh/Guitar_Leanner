@@ -30,6 +30,8 @@ export interface PracticeStore {
   library: LibraryItem[];
   /** 节拍器设置。 */
   metronome: { bpm: number; beats: string; sub: string };
+  /** 播放位置共享切片（tick 十进制字符串；由 TransportBar 轮询写入，供 PracticeBoard 等消费）。 */
+  transportPositionSlice: { tick: string | null; playing: boolean };
 
   setImported: (fileName: string, isr: InternalScore, expansion: PlaybackExpansion) => void;
   setLoading: (fileName: string) => void;
@@ -43,6 +45,8 @@ export interface PracticeStore {
   loadFromLibrary: (id: string) => void;
   /** 应用节拍器设置。 */
   setMetronome: (bpm: number, beats: string, sub: string) => void;
+  /** 写入共享播放位置。 */
+  setTransportPosition: (tick: string | null, playing: boolean) => void;
 }
 
 let librarySequence = 0;
@@ -56,6 +60,7 @@ export const usePracticeStore = create<PracticeStore>()(
       importer: { kind: "idle" },
       library: [],
       metronome: { bpm: 120, beats: "4/4", sub: "1/4" },
+      transportPositionSlice: { tick: null, playing: false },
       setImported: (fileName, isr, expansion) => set({ isr, expansion, importer: { kind: "done", fileName } }),
       setLoading: (fileName) => set({ importer: { kind: "loading", fileName } }),
       setImportError: (fileName, message) => set({ importer: { kind: "error", fileName, message } }),
@@ -87,6 +92,7 @@ export const usePracticeStore = create<PracticeStore>()(
         });
       },
       setMetronome: (bpm, beats, sub) => set({ metronome: { bpm, beats, sub } }),
+      setTransportPosition: (tick, playing) => set({ transportPositionSlice: { tick, playing } }),
     }),
     {
       name: "guitar-practice-library",

@@ -1,10 +1,8 @@
-#include "wav_recorder.h"
+﻿#include "wav_recorder.h"
 #include <cmath>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
-
-namespace guitar_learner { namespace audio {
 
 static constexpr size_t kRingSize = 1 << 18; // 256k samples (~5.3s at 48kHz mono)
 
@@ -86,9 +84,9 @@ void WavRecorder::startRecording(const juce::File& file, double sr, int ch) {
   impl_->pendingFrames = 0;
   impl_->recording = true;
 
-  impl_->outStream = file.createOutputStream();
+  impl_->outStream.reset(file.createOutputStream());
   if (impl_->outStream) {
-    // Placeholder header �� updated on stop
+    // Placeholder header — updated on stop
     impl_->writeWavHeader(*impl_->outStream, 0);
   }
 
@@ -116,10 +114,10 @@ void WavRecorder::stopRecording() {
   if (impl_->outStream) {
     // Count total frames written
     impl_->outStream->flush();
-    int64_t endPos = impl_->outStream->getPosition();
     impl_->outStream->setPosition(0);
-    // Rewrite header with actual frame count
-    int totalFrames = (int)((endPos - 44) / (impl_->numChannels * 4));
+    // Recalculate data size; approximate from file size
+    int64_t fileSize = impl_->outStream->getTotalLength();
+    int totalFrames = (int)((fileSize - 44) / (impl_->numChannels * 4));
     impl_->writeWavHeader(*impl_->outStream, totalFrames);
     impl_->outStream.reset();
   }
@@ -140,5 +138,3 @@ void WavRecorder::pushSamples(const float* const* input, int ch, int numSamples)
   impl_->pendingFrames += numSamples;
   impl_->writerCv.notify_one();
 }
-
-}} // namespace guitar_learner::audio

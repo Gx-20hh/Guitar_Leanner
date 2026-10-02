@@ -1,13 +1,14 @@
 #include "webview_host.h"
 #include "guitar_bridge_protocol.h"
+#include "transport/transport.h"
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <vector>
 
 namespace guitar_learner {
 
 namespace
 {
 
-// 根据扩展名推断 MIME（仅资源根内部静态资源）。
 juce::String mimeForExtension (const juce::String& ext)
 {
     if (ext == "html")     return "text/html; charset=utf-8";
@@ -25,22 +26,15 @@ juce::String mimeForExtension (const juce::String& ext)
     return "application/octet-stream";
 }
 
-// 把 provider 收到的资源请求（恒以 "/" 起始）解析为 root 内相对路径。
-// 拒绝：""（非 / 起）、"//…" network-path、反斜杠、冒号、?/#（query/fragment）、
-//     任何非纯相对段。合法："/" -> ""（index.html）、"/assets/x.js" -> "assets/x.js"。
 juce::String parseRelPath (const juce::String& requestPath, bool& ok)
 {
     ok = false;
-
     if (! requestPath.startsWithChar ('/'))
         return {};
-
-    const juce::String rel = requestPath.substring (1); // 去掉一个前导 "/"
-
-    // network-path 形式（第二个字符仍是 "/"）与反斜杠/冒号/query/fragment：拒绝
-    if (rel.startsWithChar ('/') || rel.contains ("\\") || rel.contains (":") || rel.contains ("?") || rel.contains ("#"))
+    const juce::String rel = requestPath.substring (1);
+    if (rel.startsWithChar ('/') || rel.contains ("\\") || rel.contains (":")
+        || rel.contains ("?") || rel.contains ("#"))
         return {};
-
     ok = true;
     return rel;
 }
@@ -50,7 +44,6 @@ juce::String parseRelPath (const juce::String& requestPath, bool& ok)
 ResourceResolution WebViewHost::resolveResourcePath (const juce::File& root, const juce::String& requestPath)
 {
     ResourceResolution result;
-
     if (! root.isDirectory())
     {
         result.error = "resource root directory missing";
@@ -68,7 +61,6 @@ ResourceResolution WebViewHost::resolveResourcePath (const juce::File& root, con
     if (rel.isEmpty())
         rel = "index.html";
 
-    // 逐段校验：空段、"."、"/"、段内反斜杠或冒号 → 拒绝
     juce::StringArray segments;
     segments.addTokens (rel, "/", juce::StringRef());
     for (const auto& seg : segments)
@@ -80,8 +72,6 @@ ResourceResolution WebViewHost::resolveResourcePath (const juce::File& root, con
         }
     }
 
-    // 拼接候选，并做规范化 containment 检查（防 sibling-prefix 逃逸如 rootA/../… 已在段层拒，
-    // 这里再兜底一次确保绝对落在 root 内）。
     const auto rootNorm = juce::File::createFileWithoutCheckingPath (root.getFullPathName()).getFullPathName();
     const auto candidate = root.getChildFile (rel);
     const auto candNorm = juce::File::createFileWithoutCheckingPath (candidate.getFullPathName()).getFullPathName();
@@ -103,12 +93,12 @@ ResourceResolution WebViewHost::resolveResourcePath (const juce::File& root, con
     return result;
 }
 
-WebViewHost::WebViewHost()
-    : resourceRootUrl_ (juce::WebBrowserComponent::getResourceProviderRoot())
+WebViewHost::WebViewHost (Transport& transport)
+    : transport_ (transport),
+      resourceRootUrl_ (juce::WebBrowserComponent::getResourceProviderRoot())
 {
     const juce::File ui = uiDir();
 
-    // 严格本地资源提供：只 serve ui/ 内文件；非法请求返回无（WebView 得到 404/失败）。
     auto resourceProvider = [ui] (const juce::String& url)
         -> std::optional<juce::WebBrowserComponent::Resource>
     {
@@ -147,7 +137,6 @@ WebViewHost::WebViewHost()
     if (supported)
     {
         browser_ = std::make_unique<BridgedBrowser> (options, *this);
-        // 加载资源根：provider 收到 "/" 返回 index.html。无外部 URL、无开发服务器。
         browser_->goToURL (resourceRootUrl_);
         addAndMakeVisible (browser_.get());
     }
@@ -186,7 +175,6 @@ void WebViewHost::resized()
 void WebViewHost::handleNativeFunction (const juce::Array<juce::var>& args,
                                         juce::WebBrowserComponent::NativeFunctionCompletion completion)
 {
-    // 契约：唯一函数 guitarBridge(request)，request 是 JS 对象（第一个参数）。
     if (args.size() < 1 || ! args[0].isObject())
     {
         juce::var err (new juce::DynamicObject());
@@ -201,24 +189,209 @@ void WebViewHost::handleNativeFunction (const juce::Array<juce::var>& args,
         return;
     }
 
-    const auto requestJson = juce::JSON::toString (args[0], true);
-    const auto replyObj = guitar_bridge::makePingReplyVar (requestJson);
+    const auto requestId = guitar_bridge::extractStringField (args[0], "requestId");
+    const auto type = guitar_bridge::extractStringField (args[0], "type");
 
-    completion (replyObj);
+    juce::var reply;
+
+    if (type == "ping")
+        reply = guitar_bridge::makePingReplyVar (juce::JSON::toString (args[0], false));
+    else if (type == "play")
+        reply = handlePlay (args[0]);
+    else if (type == "pause")
+        reply = handlePause (args[0]);
+    else if (type == "stop")
+        reply = handleStop (args[0]);
+    else if (type == "seek")
+        reply = handleSeek (args[0]);
+    else if (type == "setSpeed")
+        reply = handleSetSpeed (args[0]);
+    else if (type == "setLoop")
+        reply = handleSetLoop (args[0]);
+    else if (type == "loadScore")
+        reply = handleLoadScore (args[0]);
+    else if (type == "getTransportPosition")
+        reply = handleGetTransportPosition (args[0]);
+    else
+        reply = makeError (requestId, "E_UNKNOWN_COMMAND", "command not allowed: " + type);
+
+    completion (reply);
+}
+
+juce::var WebViewHost::handlePlay (const juce::var& request)
+{
+    transport_.play();
+    return makeReply (guitar_bridge::extractStringField (request, "requestId"), juce::var());
+}
+
+juce::var WebViewHost::handlePause (const juce::var& request)
+{
+    transport_.pause();
+    return makeReply (guitar_bridge::extractStringField (request, "requestId"), juce::var());
+}
+
+juce::var WebViewHost::handleStop (const juce::var& request)
+{
+    transport_.stop();
+    return makeReply (guitar_bridge::extractStringField (request, "requestId"), juce::var());
+}
+
+juce::var WebViewHost::handleSeek (const juce::var& request)
+{
+    const auto requestId = guitar_bridge::extractStringField (request, "requestId");
+    auto payload = guitar_bridge::getField (request, "payload");
+    if (! payload.isObject())
+        return makeError (requestId, "E_BAD_PAYLOAD", "payload must be an object with 'tick'");
+
+    const int tick = getIntField (payload, "tick", -1);
+    if (tick < 0)
+        return makeError (requestId, "E_BAD_PAYLOAD", "payload.tick must be a non-negative integer");
+
+    transport_.seek (tick);
+    return makeReply (requestId, juce::var());
+}
+
+juce::var WebViewHost::handleSetSpeed (const juce::var& request)
+{
+    const auto requestId = guitar_bridge::extractStringField (request, "requestId");
+    auto payload = guitar_bridge::getField (request, "payload");
+    if (! payload.isObject())
+        return makeError (requestId, "E_BAD_PAYLOAD", "payload must be an object with 'ratio'");
+
+    juce::var ratioField = guitar_bridge::getField (payload, "ratio");
+    if (! (ratioField.isInt() || ratioField.isDouble()))
+        return makeError (requestId, "E_BAD_PAYLOAD", "payload.ratio must be a number");
+
+    transport_.setSpeed (static_cast<double> (ratioField));
+    return makeReply (requestId, juce::var());
+}
+
+juce::var WebViewHost::handleSetLoop (const juce::var& request)
+{
+    const auto requestId = guitar_bridge::extractStringField (request, "requestId");
+    auto payload = guitar_bridge::getField (request, "payload");
+    if (! payload.isObject())
+        return makeError (requestId, "E_BAD_PAYLOAD", "payload must be an object with 'startTick'/'endTick'");
+
+    const int startTick = getIntField (payload, "startTick", -1);
+    const int endTick = getIntField (payload, "endTick", -1);
+    if (startTick < 0 || endTick < 0 || startTick >= endTick)
+        return makeError (requestId, "E_BAD_PAYLOAD", "loop range invalid");
+
+    transport_.setLoop (startTick, endTick);
+    return makeReply (requestId, juce::var());
+}
+
+juce::var WebViewHost::handleLoadScore (const juce::var& request)
+{
+    const auto requestId = guitar_bridge::extractStringField (request, "requestId");
+    auto payload = guitar_bridge::getField (request, "payload");
+    if (! payload.isObject())
+        return makeError (requestId, "E_BAD_PAYLOAD", "payload must be an object with 'events' array");
+
+    auto eventsField = guitar_bridge::getField (payload, "events");
+    if (! eventsField.isArray())
+        return makeError (requestId, "E_BAD_PAYLOAD", "payload.events must be an array");
+
+    auto* arr = eventsField.getArray();
+    if (arr == nullptr)
+        return makeError (requestId, "E_BAD_PAYLOAD", "payload.events array unreadable");
+
+    std::vector<TransportMidiEvent> events;
+    events.reserve (static_cast<size_t> (arr->size()));
+
+    for (const auto& item : *arr)
+    {
+        if (! item.isObject())
+            continue;
+
+        TransportMidiEvent ev{};
+        ev.tick = getIntField (item, "tick", 0);
+        ev.type = static_cast<TransportMidiEvent::EventType> (getIntField (item, "type", 0));
+        ev.channel = getIntField (item, "channel", 0);
+        ev.key = getIntField (item, "key", 0);
+        ev.velocity = getIntField (item, "velocity", 0);
+        ev.length = getIntField (item, "length", 0);
+        ev.tempoBpm = getIntField (item, "tempoBpm", 120);
+        ev.timeSigNum = getIntField (item, "timeSigNum", 4);
+        ev.timeSigDen = getIntField (item, "timeSigDen", 4);
+        events.push_back (ev);
+    }
+
+    transport_.loadScore (events.data(), static_cast<int> (events.size()));
+
+    juce::var replyPayload (new juce::DynamicObject());
+    replyPayload.getDynamicObject()->setProperty ("count", static_cast<int> (events.size()));
+    return makeReply (requestId, replyPayload);
+}
+
+juce::var WebViewHost::handleGetTransportPosition (const juce::var& request)
+{
+    const auto requestId = guitar_bridge::extractStringField (request, "requestId");
+
+    juce::var payload (new juce::DynamicObject());
+    payload.getDynamicObject()->setProperty ("tick", transport_.currentTick());
+    payload.getDynamicObject()->setProperty ("playing", transport_.isPlaying());
+    payload.getDynamicObject()->setProperty ("positionSeconds", transport_.positionSeconds());
+    payload.getDynamicObject()->setProperty ("speed", transport_.speedRatio());
+
+    return makeReply (requestId, payload);
+}
+
+juce::var WebViewHost::makeError (const juce::String& requestId,
+                                  const juce::String& code,
+                                  const juce::String& message)
+{
+    juce::var reply (new juce::DynamicObject());
+    auto* obj = reply.getDynamicObject();
+    obj->setProperty ("protocolVersion", guitar_bridge::kProtocolVersion);
+    if (requestId.isEmpty())
+        obj->setProperty ("requestId", juce::var());
+    else
+        obj->setProperty ("requestId", requestId);
+    obj->setProperty ("ok", false);
+
+    juce::var err (new juce::DynamicObject());
+    err.getDynamicObject()->setProperty ("code", code);
+    err.getDynamicObject()->setProperty ("message", message);
+    obj->setProperty ("error", err);
+
+    return reply;
+}
+
+juce::var WebViewHost::makeReply (const juce::String& requestId, const juce::var& payload)
+{
+    juce::var reply (new juce::DynamicObject());
+    auto* obj = reply.getDynamicObject();
+    obj->setProperty ("protocolVersion", guitar_bridge::kProtocolVersion);
+    if (requestId.isEmpty())
+        obj->setProperty ("requestId", juce::var());
+    else
+        obj->setProperty ("requestId", requestId);
+    obj->setProperty ("ok", true);
+    if (payload.isUndefined())
+        obj->setProperty ("payload", juce::var());
+    else
+        obj->setProperty ("payload", payload);
+    return reply;
+}
+
+int WebViewHost::getIntField (const juce::var& obj, const juce::String& name, int defaultValue)
+{
+    auto value = guitar_bridge::getField (obj, name);
+    if (value.isInt() || value.isDouble())
+        return static_cast<int> (value);
+    return defaultValue;
 }
 
 bool WebViewHost::BridgedBrowser::pageAboutToLoad (const juce::String& url)
 {
-    // 严格本地内容边界：只允许 resourceRootUrl_（尾 "/"）本身或其子路径。
-    // root 尾 "/" 天然排除 sibling-origin 前缀（如 https://juce.backend.evil）。
-    // 任何外部 URL/协议/相对逃逸在此拒绝 —— bridge 只在可信页面可见。
     return url == owner_.resourceRootUrl_
         || url.startsWith (owner_.resourceRootUrl_);
 }
 
 void WebViewHost::BridgedBrowser::newWindowAttemptingToLoad (const juce::String& url)
 {
-    // JUCE 语义：仅通知，不创建窗口。拒绝并忽略（不做弹出、不交系统浏览器）。
     juce::ignoreUnused (url);
 }
 

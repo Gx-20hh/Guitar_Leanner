@@ -1,0 +1,225 @@
+#include "webview_host.h"
+#include "guitar_bridge_protocol.h"
+#include <juce_gui_basics/juce_gui_basics.h>
+
+namespace guitar_learner {
+
+namespace
+{
+
+// 根据扩展名推断 MIME（仅资源根内部静态资源）。
+juce::String mimeForExtension (const juce::String& ext)
+{
+    if (ext == "html")     return "text/html; charset=utf-8";
+    if (ext == "js")       return "application/javascript; charset=utf-8";
+    if (ext == "css")      return "text/css; charset=utf-8";
+    if (ext == "svg")      return "image/svg+xml";
+    if (ext == "png")      return "image/png";
+    if (ext == "jpg" || ext == "jpeg") return "image/jpeg";
+    if (ext == "json")     return "application/json; charset=utf-8";
+    if (ext == "ico")      return "image/x-icon";
+    if (ext == "woff")     return "font/woff";
+    if (ext == "woff2")    return "font/woff2";
+    if (ext == "ttf")      return "font/ttf";
+    if (ext == "map")      return "application/json; charset=utf-8";
+    return "application/octet-stream";
+}
+
+// 把 provider 收到的资源请求（恒以 "/" 起始）解析为 root 内相对路径。
+// 拒绝：""（非 / 起）、"//…" network-path、反斜杠、冒号、?/#（query/fragment）、
+//     任何非纯相对段。合法："/" -> ""（index.html）、"/assets/x.js" -> "assets/x.js"。
+juce::String parseRelPath (const juce::String& requestPath, bool& ok)
+{
+    ok = false;
+
+    if (! requestPath.startsWithChar ('/'))
+        return {};
+
+    const juce::String rel = requestPath.substring (1); // 去掉一个前导 "/"
+
+    // network-path 形式（第二个字符仍是 "/"）与反斜杠/冒号/query/fragment：拒绝
+    if (rel.startsWithChar ('/') || rel.contains ("\\") || rel.contains (":") || rel.contains ("?") || rel.contains ("#"))
+        return {};
+
+    ok = true;
+    return rel;
+}
+
+} // namespace
+
+ResourceResolution WebViewHost::resolveResourcePath (const juce::File& root, const juce::String& requestPath)
+{
+    ResourceResolution result;
+
+    if (! root.isDirectory())
+    {
+        result.error = "resource root directory missing";
+        return result;
+    }
+
+    bool parsedOk = false;
+    juce::String rel = parseRelPath (requestPath, parsedOk);
+    if (! parsedOk)
+    {
+        result.error = "rejected: malformed resource request";
+        return result;
+    }
+
+    if (rel.isEmpty())
+        rel = "index.html";
+
+    // 逐段校验：空段、"."、"/"、段内反斜杠或冒号 → 拒绝
+    juce::StringArray segments;
+    segments.addTokens (rel, "/", juce::StringRef());
+    for (const auto& seg : segments)
+    {
+        if (seg.isEmpty() || seg == "." || seg == ".." || seg.contains ("\\") || seg.contains (":"))
+        {
+            result.error = "rejected: invalid path segment";
+            return result;
+        }
+    }
+
+    // 拼接候选，并做规范化 containment 检查（防 sibling-prefix 逃逸如 rootA/../… 已在段层拒，
+    // 这里再兜底一次确保绝对落在 root 内）。
+    const auto rootNorm = juce::File::createFileWithoutCheckingPath (root.getFullPathName()).getFullPathName();
+    const auto candidate = root.getChildFile (rel);
+    const auto candNorm = juce::File::createFileWithoutCheckingPath (candidate.getFullPathName()).getFullPathName();
+
+    if (! candNorm.startsWith (rootNorm + juce::File::getSeparatorString()))
+    {
+        result.error = "rejected: path escapes resource root";
+        return result;
+    }
+
+    if (! candidate.existsAsFile())
+    {
+        result.error = "missing resource: " + rel;
+        return result;
+    }
+
+    result.ok = true;
+    result.file = candidate;
+    return result;
+}
+
+WebViewHost::WebViewHost()
+    : resourceRootUrl_ (juce::WebBrowserComponent::getResourceProviderRoot())
+{
+    const juce::File ui = uiDir();
+
+    // 严格本地资源提供：只 serve ui/ 内文件；非法请求返回无（WebView 得到 404/失败）。
+    auto resourceProvider = [ui] (const juce::String& url)
+        -> std::optional<juce::WebBrowserComponent::Resource>
+    {
+        auto res = WebViewHost::resolveResourcePath (ui, url);
+        if (! res.ok)
+            return std::nullopt;
+
+        juce::WebBrowserComponent::Resource out;
+        out.mimeType = mimeForExtension (res.file.getFileExtension()
+                                             .fromFirstOccurrenceOf (".", false, false).toLowerCase());
+        auto stream = res.file.createInputStream();
+        if (stream == nullptr)
+            return std::nullopt;
+
+        const auto size = static_cast<size_t> (res.file.getSize());
+        out.data.resize (size);
+        if (size > 0 && stream->read (out.data.data(), static_cast<int> (size)) != static_cast<int> (size))
+            return std::nullopt;
+
+        return out;
+    };
+
+    auto options = juce::WebBrowserComponent::Options{}
+        .withBackend (juce::WebBrowserComponent::Options::Backend::webview2)
+        .withNativeIntegrationEnabled()
+        .withNativeFunction ("guitarBridge",
+                             [this] (const juce::Array<juce::var>& args,
+                                     juce::WebBrowserComponent::NativeFunctionCompletion completion)
+                             {
+                                 handleNativeFunction (args, completion);
+                             })
+        .withResourceProvider (resourceProvider);
+
+    const bool supported = juce::WebBrowserComponent::areOptionsSupported (options);
+
+    if (supported)
+    {
+        browser_ = std::make_unique<BridgedBrowser> (options, *this);
+        // 加载资源根：provider 收到 "/" 返回 index.html。无外部 URL、无开发服务器。
+        browser_->goToURL (resourceRootUrl_);
+        addAndMakeVisible (browser_.get());
+    }
+
+    statusLabel_.setText (supported
+                          ? "WebView2 runtime available"
+                          : "WebView2 runtime NOT available: cannot create browser",
+                          juce::dontSendNotification);
+    statusLabel_.setColour (juce::Label::textColourId,
+                            supported ? juce::Colours::limegreen : juce::Colours::red);
+    addAndMakeVisible (statusLabel_);
+    setSize (900, 600);
+}
+
+juce::File WebViewHost::uiDir() const
+{
+    const auto exe = juce::File::getSpecialLocation (juce::File::currentExecutableFile);
+    return exe.getParentDirectory().getChildFile ("ui");
+}
+
+bool WebViewHost::isRuntimeAvailable() const { return browser_ != nullptr; }
+
+juce::String WebViewHost::runtimeStatus() const
+{
+    return browser_ ? "WebView2 runtime available" : "WebView2 runtime NOT available";
+}
+
+void WebViewHost::resized()
+{
+    auto area = getLocalBounds();
+    statusLabel_.setBounds (area.removeFromBottom (24));
+    if (browser_ != nullptr)
+        browser_->setBounds (area);
+}
+
+void WebViewHost::handleNativeFunction (const juce::Array<juce::var>& args,
+                                        juce::WebBrowserComponent::NativeFunctionCompletion completion)
+{
+    // 契约：唯一函数 guitarBridge(request)，request 是 JS 对象（第一个参数）。
+    if (args.size() < 1 || ! args[0].isObject())
+    {
+        juce::var err (new juce::DynamicObject());
+        err.getDynamicObject()->setProperty ("protocolVersion", 1);
+        err.getDynamicObject()->setProperty ("requestId", juce::var());
+        err.getDynamicObject()->setProperty ("ok", false);
+        juce::var errobj (new juce::DynamicObject());
+        errobj.getDynamicObject()->setProperty ("code", "E_MALFORMED_REQUEST");
+        errobj.getDynamicObject()->setProperty ("message", "expected a request object as first argument");
+        err.getDynamicObject()->setProperty ("error", errobj);
+        completion (err);
+        return;
+    }
+
+    const auto requestJson = juce::JSON::toString (args[0], true);
+    const auto replyObj = guitar_bridge::makePingReplyVar (requestJson);
+
+    completion (replyObj);
+}
+
+bool WebViewHost::BridgedBrowser::pageAboutToLoad (const juce::String& url)
+{
+    // 严格本地内容边界：只允许 resourceRootUrl_（尾 "/"）本身或其子路径。
+    // root 尾 "/" 天然排除 sibling-origin 前缀（如 https://juce.backend.evil）。
+    // 任何外部 URL/协议/相对逃逸在此拒绝 —— bridge 只在可信页面可见。
+    return url == owner_.resourceRootUrl_
+        || url.startsWith (owner_.resourceRootUrl_);
+}
+
+void WebViewHost::BridgedBrowser::newWindowAttemptingToLoad (const juce::String& url)
+{
+    // JUCE 语义：仅通知，不创建窗口。拒绝并忽略（不做弹出、不交系统浏览器）。
+    juce::ignoreUnused (url);
+}
+
+} // namespace guitar_learner

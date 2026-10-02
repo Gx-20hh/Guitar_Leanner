@@ -1,6 +1,6 @@
 import { render, screen } from "./test-utils";
 import { describe, expect, it } from "vitest";
-import { PracticeBoard } from "./PracticeBoard";
+import { PracticeBoard, targetAtTick } from "./PracticeBoard";
 import type { InternalScore } from "./parser/isr";
 import type { PlaybackExpansion } from "./score/playbackTypes";
 
@@ -79,5 +79,27 @@ describe("PracticeBoard", () => {
     render(<PracticeBoard isr={isr()} expansion={expansion([])} />);
     expect(screen.getByTestId("practice").querySelector(".fretCell.target")).toBeNull();
     expect(screen.getByTestId("string-1")).toBeTruthy();
+  });
+
+  it("targetAtTick：当前 tick 落在 [start,duration) 内为当前目标，否则 null", () => {
+    const t = target(6, 0); // startTick "0", durationTicks "960"
+    const tags = [t];
+    expect(targetAtTick(expansion(tags), "0")?.id).toBe(t.id);
+    expect(targetAtTick(expansion(tags), "480")?.id).toBe(t.id);
+    expect(targetAtTick(expansion(tags), "960")).toBeNull(); // 区间右开
+    expect(targetAtTick(expansion(tags), null)).toBeNull();
+    expect(targetAtTick(expansion(tags), undefined)).toBeNull();
+    expect(targetAtTick(expansion(tags), "abc")).toBeNull();
+  });
+
+  it("currentTick 对应的目标格带 data-playing=true（播放中高亮）", () => {
+    render(
+      <PracticeBoard isr={isr()} expansion={expansion([target(6, 0)])} currentTick="480" />,
+    );
+    const playing = screen
+      .getByTestId("practice")
+      .querySelector(`[data-string="6"][data-fret="0"].fretCell`);
+    expect(playing?.getAttribute("data-playing")).toBe("true");
+    expect((playing as HTMLElement).className).toContain("playing");
   });
 });

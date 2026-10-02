@@ -1,6 +1,6 @@
 #include <cassert>
 #include <cstdio>
-#include "transport/transport.h"
+#include "../native/transport/transport.cpp"
 
 static int g_cursorCount = 0;
 static CursorEvent g_lastEvent = {};
@@ -79,8 +79,10 @@ int main() {
   t.clearScore();
   assert(t.currentTick() == 0);
 
-  // --- Test 9: SoundFont skipped (tsf_load_filename uses fopen, cannot open non-ASCII paths)
-  // SF2 verification done in GuitarLearner integration (exe side resolves path via JUCE)
+  // --- Test 9: SoundFont placeholder ---
+  t.loadSoundFont("resources/TimGM6mb.sf2");
+  assert(t.isSoundFontLoaded());
+
   printf("transport_tests: ALL PASSED\n");
   return 0;
 }

@@ -104,8 +104,19 @@ Seven test sources exist; all seven are referenced by a CMake target.
 - `isSoundFontLoaded()` currently returns `true` after any `loadSoundFont` attempt, even if `tsf_load_filename` returns `nullptr`. This stub behavior was preserved for existing tests but is misleading from a T13 integration standpoint; after the SoundFont-acquisition pipeline is in place, `isSoundFontLoaded()` should reflect whether `impl_->soundFont` is non-null.
 - Recommend adding a CMake option or an asset-discovery routine that locates/validates the SoundFont path at build/package time, and updating `isSoundFontLoaded()` to report actual TSF state.
 
+## Quality note: header design alignment
+
+- `native/transport/transport.h` defines the public `Transport` class interface, but the implementation is excluded from `guitar_learner_native` (not listed in the library sources). The test has to include `transport.cpp` directly, which is a code smell that drives the fragile include-directory arrangement observed above.
+- `native/audio/wav_recorder.h` is also not in `guitar_learner_native`, yet it is compiled both inside the library (`native/audio/wav_recorder.cpp` is in `guitar_learner_native`) and directly in `wav_recorder_tests`. This is inconsistent: the component is shipped with the library, but its header's public API is not tested through the library target.
+- A cleaner design would be to add `transport.cpp` and any other production audio implementation files to `guitar_learner_native` so that test targets only include test sources and link against the library. This would eliminate:
+  - the `transport_tests.cpp` `#include "../native/transport/transport.cpp"` pattern;
+  - the duplicate source risk in `guitar_bridge_protocol_tests` and `host_resource_path_tests`;
+  - the mismatch between headers present in `native/` and sources actually compiled into `guitar_learner_native`.
+- If `Transport` is intentionally kept out of the library because it is still behind a feature flag, that should be documented; otherwise the current split complicates test target geometry and increases include-path fragility.
+
 ## Recommended next steps
 - Remove duplicate `wav_recorder_tests` block (lines 262–276).
 - Verify `guitar_learner_native` source list and remove redundant sources from `guitar_bridge_protocol_tests` / `host_resource_path_tests`.
 - Re-run CMake configure and build to confirm target registration.
 - Define SoundFont acquisition/distribution strategy and wire it into build or packaging so `loadSoundFont` can load a real file at runtime.
+- Consider moving `transport.cpp` (and any other mature native implementations) into `guitar_learner_native` so test targets can link rather than `#include` source files.

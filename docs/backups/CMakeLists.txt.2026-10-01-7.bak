@@ -76,13 +76,9 @@ add_library(guitar_learner_native STATIC
   native/audio/rms_meter.cpp
   native/audio/device_input.cpp
   native/audio/wav_recorder.cpp
-  native/transport/transport.cpp
   native/app/webview_host.cpp
-  native/dsp/pitch_detector.cpp
-  native/dsp/onset_detector.cpp
 )
 target_include_directories(guitar_learner_native PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/native
   ${CMAKE_CURRENT_SOURCE_DIR}/native/bridge
   ${CMAKE_CURRENT_SOURCE_DIR}/contracts
@@ -268,41 +264,3 @@ if(MSVC)
 endif()
 add_test(NAME wav_recorder_tests COMMAND wav_recorder_tests)
 set_tests_properties(wav_recorder_tests PROPERTIES TIMEOUT 15)
-
-# T9 音频：YIN 音高检测（E2/E4/25音分/静音/超范围）
-add_executable(pitch_tests
-  tests/audio-fixtures/pitch_tests.cpp
-)
-target_include_directories(pitch_tests PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/native
-  ${CMAKE_CURRENT_SOURCE_DIR}/native/dsp
-  ${JUCE_SOURCE_DIR}/modules
-)
-target_link_libraries(pitch_tests PRIVATE
-  guitar_learner_native
-  juce::juce_core
-)
-if(MSVC)
-  target_compile_options(pitch_tests PRIVATE /W4 /permissive-)
-endif()
-add_test(NAME pitch_tests COMMAND pitch_tests)
-set_tests_properties(pitch_tests PROPERTIES TIMEOUT 15)
-
-# T9 音频：起音检测（静音/首帧强/连续强/重置）
-add_executable(onset_tests
-  tests/audio-fixtures/onset_tests.cpp
-)
-target_include_directories(onset_tests PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/native
-  ${CMAKE_CURRENT_SOURCE_DIR}/native/dsp
-  ${JUCE_SOURCE_DIR}/modules
-)
-target_link_libraries(onset_tests PRIVATE
-  guitar_learner_native
-  juce::juce_core
-)
-if(MSVC)
-  target_compile_options(onset_tests PRIVATE /W4 /permissive-)
-endif()
-add_test(NAME onset_tests COMMAND onset_tests)
-set_tests_properties(onset_tests PROPERTIES TIMEOUT 15)

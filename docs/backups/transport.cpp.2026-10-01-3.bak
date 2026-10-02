@@ -164,7 +164,7 @@ void Transport::loadSoundFont(const char* sf2Path) {
   impl_->sfLoaded = true;
 }
 
-bool Transport::isSoundFontLoaded() const { return impl_->soundFont != nullptr; }
+bool Transport::isSoundFontLoaded() const { return impl_->sfLoaded; }
 
 void Transport::loadScore(const TransportMidiEvent* ev, int n) {
   juce::ScopedLock l(impl_->lock);
@@ -247,7 +247,7 @@ void Transport::startRecording(const char* filePath, int inputChannels) {
     impl_->recorder->stopRecording();
 
   impl_->recorderInputChannels.store(inputChannels, std::memory_order_release);
-  impl_->recorder->startRecording(juce::File(filePath), impl_->sampleRate, inputChannels);
+  impl_->recorder->startRecording(filePath, impl_->sampleRate, inputChannels);
   impl_->recorderAtomic.store(impl_->recorder.get(), std::memory_order_release);
 }
 
@@ -279,7 +279,7 @@ void Transport::captureInput(const juce::AudioSourceChannelInfo& inputBuffer) {
   for (int i = 0; i < ch; ++i)
     chPtr[i] = inputBuffer.buffer->getReadPointer(i, inputBuffer.startSample);
 
-  r->pushSamples(chPtr, ch, inputBuffer.numSamples);
+  r->writeChannels(chPtr, ch, inputBuffer.numSamples);
 }
 
 void Transport::getNextAudioBlock(const juce::AudioSourceChannelInfo& buf) {

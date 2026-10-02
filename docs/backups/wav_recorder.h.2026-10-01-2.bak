@@ -1,0 +1,21 @@
+#pragma once 
+#include <juce_core/juce_core.h> 
+#include <vector> 
+#include <memory> 
+ 
+class WavRecorder { 
+public: 
+  WavRecorder(); 
+  ~WavRecorder(); 
+ 
+  void startRecording(const juce::File& file, double sampleRate, int numChannels); 
+  void stopRecording(); 
+  bool isRecording() const; 
+ 
+  // Called from audio callback -- non-blocking, just copies samples into ring buffer 
+  void pushSamples(const float* const* inputData, int numChannels, int numSamples); 
+ 
+private: 
+  struct Impl; 
+  std::unique_ptr<Impl> impl_; 
+};
