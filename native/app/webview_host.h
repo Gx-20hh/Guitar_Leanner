@@ -84,6 +84,7 @@ private:
     friend class BridgedBrowser;
 
     Transport& transport_;
+    std::vector<CursorEvent> cursorEvents_;
     std::unique_ptr<BridgedBrowser> browser_;
     juce::Label statusLabel_;
     juce::String resourceRootUrl_; // getResourceProviderRoot() 的值（Windows: https://juce.backend/）

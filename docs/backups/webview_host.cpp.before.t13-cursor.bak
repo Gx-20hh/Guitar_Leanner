@@ -97,11 +97,6 @@ WebViewHost::WebViewHost (Transport& transport)
     : transport_ (transport),
       resourceRootUrl_ (juce::WebBrowserComponent::getResourceProviderRoot())
 {
-    transport_.setCursorCallback ([this] (const CursorEvent& ev)
-    {
-        cursorEvents_.push_back (ev);
-    });
-
     const juce::File ui = uiDir();
 
     auto resourceProvider = [ui] (const juce::String& url)
@@ -339,41 +334,6 @@ juce::var WebViewHost::handleGetTransportPosition (const juce::var& request)
     payload.getDynamicObject()->setProperty ("playing", transport_.isPlaying());
     payload.getDynamicObject()->setProperty ("positionSeconds", transport_.positionSeconds());
     payload.getDynamicObject()->setProperty ("speed", transport_.speedRatio());
-
-    juce::Array<juce::var> events;
-    events.ensureStorageAllocated (static_cast<int> (cursorEvents_.size()));
-
-    for (const auto& ev : cursorEvents_)
-    {
-        juce::var evObj (new juce::DynamicObject());
-        auto* o = evObj.getDynamicObject();
-
-        const char* typeName = "unknown";
-        switch (ev.type)
-        {
-            case CursorEvent::Type::barStart:   typeName = "barStart";   break;
-            case CursorEvent::Type::beatTick:   typeName = "beatTick";   break;
-            case CursorEvent::Type::noteOn:     typeName = "noteOn";     break;
-            case CursorEvent::Type::noteOff:    typeName = "noteOff";    break;
-            case CursorEvent::Type::tempoChange:typeName = "tempoChange";break;
-            case CursorEvent::Type::complete:   typeName = "complete";   break;
-        }
-
-        o->setProperty ("type",         typeName);
-        o->setProperty ("occurrenceId", ev.occurrenceId);
-        o->setProperty ("tick",         ev.tick);
-        o->setProperty ("timeSeconds",  ev.timeSeconds);
-        o->setProperty ("midiNote",     ev.midiNote);
-        o->setProperty ("durationSeconds", ev.durationSeconds);
-        o->setProperty ("barIndex",     ev.barIndex);
-        o->setProperty ("beatIndex",    ev.beatIndex);
-        events.add (evObj);
-    }
-
-    cursorEvents_.clear();
-
-    juce::var eventsVar (events);
-    payload.getDynamicObject()->setProperty ("cursorEvents", eventsVar);
 
     return makeReply (requestId, payload);
 }
